@@ -216,6 +216,8 @@ body::before {
     transition: var(--transition);
     animation: cardFadeIn 0.5s ease-out backwards;
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 .recipe-card:hover {
@@ -260,7 +262,7 @@ body::before {
     padding: 20px;
     display: flex;
     flex-direction: column;
-    min-height: 200px;
+    flex: 1;
 }
 
 .recipe-header {
