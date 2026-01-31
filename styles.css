@@ -1490,10 +1490,11 @@ body::before {
     box-shadow:
         0 -4px 20px rgba(0, 0, 0, 0.15),
         0 0 0 1px rgba(255, 107, 157, 0.1);
-    z-index: 999;
+    z-index: 1000;
     padding: 8px 12px;
     justify-content: space-around;
     padding-bottom: max(8px, env(safe-area-inset-bottom));
+    padding-top: max(8px, env(safe-area-inset-top));
 }
 
 .mobile-nav-item {
@@ -1616,13 +1617,13 @@ body::before {
     }
 
     .container {
-        padding-bottom: 90px;
+        padding-bottom: 100px;
         padding-left: 15px;
         padding-right: 15px;
     }
 
     .header {
-        padding: 30px 15px;
+        padding: 30px 15px 20px;
     }
 
     .title {
@@ -1642,6 +1643,7 @@ body::before {
     .recipe-grid {
         grid-template-columns: 1fr;
         gap: 20px;
+        margin-bottom: 30px;
     }
 
     .recipe-card {

@@ -362,7 +362,7 @@ class RecipeBook {
             second: '🍝 Второе блюдо',
             salads: '🥗 Салат',
             dessert: '🍰 Десерт',
-            snacks: '🥗 Закуска',
+            snacks: '🍢 Закуска',
             baking: '🥐 Выпечка'
         };
         return labels[type] || '🍽️';
@@ -375,7 +375,7 @@ class RecipeBook {
             second: '🍝',
             salads: '🥗',
             dessert: '🍰',
-            snacks: '🥗',
+            snacks: '🍢',
             baking: '🥐'
         };
         return emojis[type] || '🍽️';
