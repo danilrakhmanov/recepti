@@ -1,4 +1,4 @@
-const CACHE_NAME = 'recipe-book-v12';
+const CACHE_NAME = 'recipe-book-v13';
 const urlsToCache = [
     './',
     './index.html',
@@ -15,9 +15,11 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => cache.addAll(urlsToCache))
+            .then(() => {
+                // Force the waiting service worker to become the active service worker
+                return self.skipWaiting();
+            })
     );
-    // Force the waiting service worker to become the active service worker
-    self.skipWaiting();
 });
 
 // Fetch event - serve from cache, fallback to network
@@ -25,21 +27,20 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         caches.match(event.request)
             .then((response) => {
-                // Cache hit - return response
-                if (response) {
-                    return response;
-                }
-
-                // Clone the request
+                // Clone request
                 const fetchRequest = event.request.clone();
 
                 return fetch(fetchRequest).then((response) => {
                     // Check if valid response
                     if (!response || response.status !== 200 || response.type !== 'basic') {
+                        // If network fails, try to return cached version
+                        if (response) {
+                            return response;
+                        }
                         return response;
                     }
 
-                    // Clone the response
+                    // Clone response
                     const responseToCache = response.clone();
 
                     caches.open(CACHE_NAME)
@@ -47,6 +48,9 @@ self.addEventListener('fetch', (event) => {
                             cache.put(event.request, responseToCache);
                         });
 
+                    return response;
+                }).catch(() => {
+                    // If network fails, return cached version if available
                     return response;
                 });
             })
@@ -58,17 +62,20 @@ self.addEventListener('activate', (event) => {
     const cacheWhitelist = [CACHE_NAME];
     event.waitUntil(
         caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (cacheWhitelist.indexOf(cacheName) === -1) {
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
+            return Promise.all([
+                // Delete old caches
+                Promise.all(
+                    cacheNames.map((cacheName) => {
+                        if (cacheWhitelist.indexOf(cacheName) === -1) {
+                            return caches.delete(cacheName);
+                        }
+                    })
+                ),
+                // Take control of all pages immediately
+                self.clients.claim()
+            ]);
         })
     );
-    // Take control of all pages immediately
-    return self.clients.claim();
 });
 
 // Handle messages from clients
