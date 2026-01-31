@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍳 Книга Рецептов</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;500;600;700&family=Pacifico&display=swap" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="title">
+                <span class="title-icon">🍳</span>
+                <span class="title-text">Книга Рецептов</span>
+                <span class="title-icon">🍰</span>
+            </h1>
+            <p class="subtitle">Сохраняй любимые рецепты в одном месте</p>
+        </header>
+
+        <!-- Add Recipe Button -->
+        <button class="add-recipe-btn" id="addRecipeBtn">
+            <span class="btn-icon">➕</span>
+            <span class="btn-text">Добавить рецепт</span>
+        </button>
+
+        <!-- Search Bar -->
+        <div class="search-container">
+            <input type="text" class="search-input" id="searchInput" placeholder="🔍 Поиск рецептов...">
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="filter-tabs">
+            <button class="tab-btn active" data-filter="all">
+                <span class="tab-icon">📖</span>
+                <span class="tab-text">Все</span>
+            </button>
+            <button class="tab-btn" data-filter="breakfast">
+                <span class="tab-icon">🌅</span>
+                <span class="tab-text">Завтрак</span>
+            </button>
+            <button class="tab-btn" data-filter="lunch">
+                <span class="tab-icon">☀️</span>
+                <span class="tab-text">Обед</span>
+            </button>
+            <button class="tab-btn" data-filter="dinner">
+                <span class="tab-icon">🌙</span>
+                <span class="tab-text">Ужин</span>
+            </button>
+            <button class="tab-btn" data-filter="favorites">
+                <span class="tab-icon">❤️</span>
+                <span class="tab-text">Избранное</span>
+            </button>
+        </div>
+
+        <!-- Recipe Grid -->
+        <div class="recipe-grid" id="recipeGrid">
+            <!-- Recipes will be dynamically added here -->
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState">
+            <div class="empty-icon">🍽️</div>
+            <h3>Рецептов пока нет</h3>
+            <p>Нажми "Добавить рецепт", чтобы начать коллекцию!</p>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Добавить рецепт</h2>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <form class="recipe-form" id="recipeForm">
+                <div class="form-group">
+                    <label class="form-label">Название рецепта *</label>
+                    <input type="text" class="form-input" id="recipeName" required placeholder="Например: Паста Карбонара">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Тип приёма пищи *</label>
+                    <select class="form-select" id="mealType" required>
+                        <option value="">Выберите тип</option>
+                        <option value="breakfast">🌅 Завтрак</option>
+                        <option value="lunch">☀️ Обед</option>
+                        <option value="dinner">🌙 Ужин</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ссылка на рецепт *</label>
+                    <input type="url" class="form-input" id="recipeUrl" required placeholder="https://...">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Описание (необязательно)</label>
+                    <textarea class="form-textarea" id="recipeDescription" rows="3" placeholder="Краткое описание рецепта..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Время приготовления (необязательно)</label>
+                    <input type="text" class="form-input" id="cookingTime" placeholder="Например: 30 мин">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">URL изображения (необязательно)</label>
+                    <input type="url" class="form-input" id="imageUrl" placeholder="https://...">
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    <span class="btn-icon">💾</span>
+                    <span class="btn-text">Сохранить рецепт</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <span class="toast-icon">✅</span>
+        <span class="toast-message">Рецепт успешно добавлен!</span>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
