@@ -369,7 +369,7 @@ class RecipeBook {
     }
 }
 
-// Initialize the app when DOM is ready
+// Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     new RecipeBook();
 });
