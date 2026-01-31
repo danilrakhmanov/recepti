@@ -26,6 +26,23 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
+    <canvas id="particlesCanvas" class="particles-canvas"></canvas>
+    
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-content">
+            <div class="loading-spinner">
+                <div class="spinner-ring"></div>
+                <div class="spinner-ring"></div>
+                <div class="spinner-ring"></div>
+            </div>
+            <div class="loading-text">
+                <span class="loading-emoji">🍳</span>
+                <span class="loading-message">Загрузка рецептов...</span>
+            </div>
+        </div>
+    </div>
+    
     <div class="container">
         <!-- Header -->
         <header class="header">
@@ -54,17 +71,21 @@
                 <span class="tab-icon">📖</span>
                 <span class="tab-text">Все</span>
             </button>
-            <button class="tab-btn" data-filter="breakfast">
-                <span class="tab-icon">🌅</span>
-                <span class="tab-text">Завтрак</span>
+            <button class="tab-btn" data-filter="first">
+                <span class="tab-icon">🍲</span>
+                <span class="tab-text">Первое блюдо</span>
             </button>
-            <button class="tab-btn" data-filter="lunch">
-                <span class="tab-icon">☀️</span>
-                <span class="tab-text">Обед</span>
+            <button class="tab-btn" data-filter="second">
+                <span class="tab-icon">🍝</span>
+                <span class="tab-text">Второе блюдо</span>
             </button>
-            <button class="tab-btn" data-filter="dinner">
-                <span class="tab-icon">🌙</span>
-                <span class="tab-text">Ужин</span>
+            <button class="tab-btn" data-filter="dessert">
+                <span class="tab-icon">🍰</span>
+                <span class="tab-text">Десерт</span>
+            </button>
+            <button class="tab-btn" data-filter="snacks">
+                <span class="tab-icon">🥗</span>
+                <span class="tab-text">Закуски</span>
             </button>
             <button class="tab-btn" data-filter="favorites">
                 <span class="tab-icon">❤️</span>
@@ -102,9 +123,10 @@
                     <label class="form-label">Тип приёма пищи *</label>
                     <select class="form-select" id="mealType" required>
                         <option value="">Выберите тип</option>
-                        <option value="breakfast">🌅 Завтрак</option>
-                        <option value="lunch">☀️ Обед</option>
-                        <option value="dinner">🌙 Ужин</option>
+                        <option value="first">🍲 Первое блюдо</option>
+                        <option value="second">🍝 Второе блюдо</option>
+                        <option value="dessert">🍰 Десерт</option>
+                        <option value="snacks">🥗 Закуски</option>
                     </select>
                 </div>
 

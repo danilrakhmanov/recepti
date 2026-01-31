@@ -29,6 +29,7 @@ class RecipeBook {
         this.recipes = [];
         this.currentFilter = 'all';
         this.searchQuery = '';
+        this.editingId = null;
         this.init();
     }
 
@@ -36,6 +37,13 @@ class RecipeBook {
         this.bindEvents();
         await this.loadRecipes();
         this.renderRecipes();
+        // Hide loading screen
+        setTimeout(() => {
+            const loadingScreen = document.getElementById('loadingScreen');
+            if (loadingScreen) {
+                loadingScreen.classList.add('hidden');
+            }
+        }, 500);
     }
 
     // Load recipes from Firebase or localStorage
@@ -137,6 +145,30 @@ class RecipeBook {
 
     // Open modal
     openModal() {
+        this.editingId = null;
+        document.querySelector('.modal-title').textContent = 'Добавить рецепт';
+        document.querySelector('.submit-btn .btn-text').textContent = 'Сохранить рецепт';
+        document.getElementById('modal').classList.add('active');
+        document.getElementById('recipeName').focus();
+    }
+
+    // Open modal for editing
+    openEditModal(id) {
+        const recipe = this.recipes.find(r => String(r.id) === String(id));
+        if (!recipe) return;
+
+        this.editingId = id;
+        document.querySelector('.modal-title').textContent = 'Редактировать рецепт';
+        document.querySelector('.submit-btn .btn-text').textContent = 'Обновить рецепт';
+
+        // Fill form with recipe data
+        document.getElementById('recipeName').value = recipe.name;
+        document.getElementById('mealType').value = recipe.mealType;
+        document.getElementById('recipeUrl').value = recipe.url;
+        document.getElementById('recipeDescription').value = recipe.description || '';
+        document.getElementById('cookingTime').value = recipe.cookingTime || '';
+        document.getElementById('imageUrl').value = recipe.imageUrl || '';
+
         document.getElementById('modal').classList.add('active');
         document.getElementById('recipeName').focus();
     }
@@ -145,9 +177,10 @@ class RecipeBook {
     closeModal() {
         document.getElementById('modal').classList.remove('active');
         document.getElementById('recipeForm').reset();
+        this.editingId = null;
     }
 
-    // Add new recipe
+    // Add new recipe or update existing
     async addRecipe() {
         const name = document.getElementById('recipeName').value.trim();
         const mealType = document.getElementById('mealType').value;
@@ -156,23 +189,45 @@ class RecipeBook {
         const cookingTime = document.getElementById('cookingTime').value.trim();
         const imageUrl = document.getElementById('imageUrl').value.trim();
 
-        const recipe = {
-            id: Date.now(),
-            name,
-            mealType,
-            url,
-            description,
-            cookingTime,
-            imageUrl,
-            favorite: false,
-            createdAt: new Date().toISOString()
-        };
+        if (this.editingId) {
+            // Update existing recipe
+            const recipeIndex = this.recipes.findIndex(r => String(r.id) === String(this.editingId));
+            if (recipeIndex !== -1) {
+                this.recipes[recipeIndex] = {
+                    ...this.recipes[recipeIndex],
+                    name,
+                    mealType,
+                    url,
+                    description,
+                    cookingTime,
+                    imageUrl,
+                    updatedAt: new Date().toISOString()
+                };
+                await this.saveRecipes();
+                this.renderRecipes();
+                this.closeModal();
+                this.showToast('Рецепт успешно обновлен! ✏️');
+            }
+        } else {
+            // Add new recipe
+            const recipe = {
+                id: Date.now(),
+                name,
+                mealType,
+                url,
+                description,
+                cookingTime,
+                imageUrl,
+                favorite: false,
+                createdAt: new Date().toISOString()
+            };
 
-        this.recipes.unshift(recipe);
-        await this.saveRecipes();
-        this.renderRecipes();
-        this.closeModal();
-        this.showToast('Рецепт успешно добавлен! 🎉');
+            this.recipes.unshift(recipe);
+            await this.saveRecipes();
+            this.renderRecipes();
+            this.closeModal();
+            this.showToast('Рецепт успешно добавлен! 🎉');
+        }
     }
 
     // Delete recipe
@@ -258,9 +313,10 @@ class RecipeBook {
     // Get meal type label
     getMealTypeLabel(type) {
         const labels = {
-            breakfast: '🌅 Завтрак',
-            lunch: '☀️ Обед',
-            dinner: '🌙 Ужин'
+            first: '🍲 Первое блюдо',
+            second: '🍝 Второе блюдо',
+            dessert: '🍰 Десерт',
+            snacks: '🥗 Закуски'
         };
         return labels[type] || type;
     }
@@ -268,9 +324,10 @@ class RecipeBook {
     // Get default emoji for meal type
     getMealTypeEmoji(type) {
         const emojis = {
-            breakfast: '🥞',
-            lunch: '🍝',
-            dinner: '🍲'
+            first: '🍲',
+            second: '🍝',
+            dessert: '🍰',
+            snacks: '🥗'
         };
         return emojis[type] || '🍽️';
     }
@@ -330,6 +387,9 @@ class RecipeBook {
                                 <span>Открыть</span>
                             </a>
                         </div>
+                        <button class="edit-btn" data-action="edit" data-id="${recipe.id}" title="Редактировать">
+                            <span>✏️</span>
+                        </button>
                         <button class="favorite-btn ${recipe.favorite ? 'active' : ''}" data-action="favorite" data-id="${recipe.id}"></button>
                         <button class="delete-btn" data-action="delete" data-id="${recipe.id}" title="Удалить">
                             <span>🗑️</span>
@@ -342,6 +402,13 @@ class RecipeBook {
 
     // Bind card events
     bindCardEvents() {
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.dataset.id;
+                this.openEditModal(id);
+            });
+        });
+
         document.querySelectorAll('.favorite-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const id = btn.dataset.id;
@@ -377,7 +444,80 @@ class RecipeBook {
     }
 }
 
+// Particles Animation
+class ParticlesAnimation {
+    constructor() {
+        this.canvas = document.getElementById('particlesCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.particles = [];
+        this.particleCount = 50;
+        this.colors = ['#ff6b9d', '#a855f7', '#fbbf24', '#34d399', '#60a5fa'];
+        this.foodEmojis = ['🍳', '🍰', '🍝', '🥗', '🍲', '🥞', '🍕', '🍔', '🌮', '🍜'];
+        this.init();
+    }
+
+    init() {
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.createParticles();
+        this.animate();
+    }
+
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+
+    createParticles() {
+        this.particles = [];
+        for (let i = 0; i < this.particleCount; i++) {
+            this.particles.push({
+                x: Math.random() * this.canvas.width,
+                y: Math.random() * this.canvas.height,
+                size: Math.random() * 20 + 10,
+                speedX: (Math.random() - 0.5) * 0.5,
+                speedY: (Math.random() - 0.5) * 0.5,
+                opacity: Math.random() * 0.5 + 0.1,
+                emoji: this.foodEmojis[Math.floor(Math.random() * this.foodEmojis.length)],
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (Math.random() - 0.5) * 0.02
+            });
+        }
+    }
+
+    animate() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.particles.forEach(particle => {
+            // Update position
+            particle.x += particle.speedX;
+            particle.y += particle.speedY;
+            particle.rotation += particle.rotationSpeed;
+
+            // Wrap around edges
+            if (particle.x < -particle.size) particle.x = this.canvas.width + particle.size;
+            if (particle.x > this.canvas.width + particle.size) particle.x = -particle.size;
+            if (particle.y < -particle.size) particle.y = this.canvas.height + particle.size;
+            if (particle.y > this.canvas.height + particle.size) particle.y = -particle.size;
+
+            // Draw particle
+            this.ctx.save();
+            this.ctx.translate(particle.x, particle.y);
+            this.ctx.rotate(particle.rotation);
+            this.ctx.globalAlpha = particle.opacity;
+            this.ctx.font = `${particle.size}px Arial`;
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(particle.emoji, 0, 0);
+            this.ctx.restore();
+        });
+
+        requestAnimationFrame(() => this.animate());
+    }
+}
+
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+    new ParticlesAnimation();
     new RecipeBook();
 });
