@@ -344,6 +344,45 @@ body::before {
     font-size: 1.2rem;
 }
 
+.filter-divider {
+    width: 1px;
+    height: 30px;
+    background: linear-gradient(180deg, transparent, var(--text-secondary), transparent);
+    margin: 0 10px;
+    opacity: 0.3;
+}
+
+.favorites-tab {
+    background: linear-gradient(135deg, #fecaca, #fca5a5);
+    color: #991b1b;
+}
+
+.favorites-tab:hover {
+    background: linear-gradient(135deg, #fca5a5, #f87171);
+    color: #7f1d1d;
+}
+
+.favorites-tab.active {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+}
+
+[data-theme="dark"] .favorites-tab {
+    background: linear-gradient(135deg, #7f1d1d, #991b1b);
+    color: #fecaca;
+}
+
+[data-theme="dark"] .favorites-tab:hover {
+    background: linear-gradient(135deg, #991b1b, #b91c1c);
+    color: #fee2e2;
+}
+
+[data-theme="dark"] .favorites-tab.active {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: white;
+}
+
 /* Recipe Grid */
 .recipe-grid {
     display: grid;
@@ -437,25 +476,73 @@ body::before {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 12px;
+    padding: 6px 14px;
     border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 500;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.recipe-type.breakfast {
+.recipe-type.first {
     background: linear-gradient(135deg, #fef3c7, #fde68a);
     color: #92400e;
 }
 
-.recipe-type.lunch {
+.recipe-type.second {
     background: linear-gradient(135deg, #dbeafe, #bfdbfe);
     color: #1e40af;
 }
 
-.recipe-type.dinner {
+.recipe-type.salads {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    color: #065f46;
+}
+
+.recipe-type.dessert {
+    background: linear-gradient(135deg, #fce7f3, #fbcfe8);
+    color: #9d174d;
+}
+
+.recipe-type.snacks {
     background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
     color: #3730a3;
+}
+
+.recipe-type.baking {
+    background: linear-gradient(135deg, #fed7aa, #fdba74);
+    color: #9a3412;
+}
+
+/* Dark theme styles for recipe types */
+[data-theme="dark"] .recipe-type.first {
+    background: linear-gradient(135deg, #92400e, #78350f);
+    color: #fef3c7;
+}
+
+[data-theme="dark"] .recipe-type.second {
+    background: linear-gradient(135deg, #1e40af, #1e3a8a);
+    color: #dbeafe;
+}
+
+[data-theme="dark"] .recipe-type.salads {
+    background: linear-gradient(135deg, #065f46, #064e3b);
+    color: #d1fae5;
+}
+
+[data-theme="dark"] .recipe-type.dessert {
+    background: linear-gradient(135deg, #9d174d, #831843);
+    color: #fce7f3;
+}
+
+[data-theme="dark"] .recipe-type.snacks {
+    background: linear-gradient(135deg, #3730a3, #312e81);
+    color: #e0e7ff;
+}
+
+[data-theme="dark"] .recipe-type.baking {
+    background: linear-gradient(135deg, #9a3412, #7c2d12);
+    color: #fed7aa;
 }
 
 .recipe-description {
@@ -1045,6 +1132,32 @@ body::before {
 .mobile-nav-label {
     font-size: 0.7rem;
     font-weight: 500;
+}
+
+.mobile-nav-divider {
+    width: 1px;
+    height: 40px;
+    background: linear-gradient(180deg, transparent, var(--text-secondary), transparent);
+    margin: 0 5px;
+    opacity: 0.3;
+}
+
+.favorites-nav-item {
+    color: #ef4444;
+}
+
+.favorites-nav-item.active {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+[data-theme="dark"] .favorites-nav-item {
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .favorites-nav-item.active {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: white;
 }
 
 @media (max-width: 768px) {

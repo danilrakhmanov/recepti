@@ -358,13 +358,14 @@ class RecipeBook {
     // Get meal type label
     getMealTypeLabel(type) {
         const labels = {
-            first: '🍲 Первые блюда',
-            second: '🍝 Вторые блюда',
-            salads: '🥗 Салаты',
-            dessert: '🍰 Десерты',
-            snacks: '🥗 Закуски'
+            first: '🍲 Первое блюдо',
+            second: '🍝 Второе блюдо',
+            salads: '🥗 Салат',
+            dessert: '🍰 Десерт',
+            snacks: '🥗 Закуска',
+            baking: '🥐 Выпечка'
         };
-        return labels[type] || type;
+        return labels[type] || '🍽️';
     }
 
     // Get default emoji for meal type
@@ -374,7 +375,8 @@ class RecipeBook {
             second: '🍝',
             salads: '🥗',
             dessert: '🍰',
-            snacks: '🥗'
+            snacks: '🥗',
+            baking: '🥐'
         };
         return emojis[type] || '🍽️';
     }
