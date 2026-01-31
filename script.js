@@ -30,6 +30,7 @@ class RecipeBook {
         this.currentFilter = 'all';
         this.searchQuery = '';
         this.editingId = null;
+        this.recipeToDelete = null;
         this.init();
     }
 
@@ -72,6 +73,10 @@ class RecipeBook {
 
     // Save recipes to Firebase or localStorage
     async saveRecipes() {
+        // Always save to localStorage first (fast)
+        this.saveToLocalStorage();
+
+        // Then save to Firebase in background (async)
         if (useFirebase && db) {
             try {
                 // Save each recipe to Firebase
@@ -82,10 +87,7 @@ class RecipeBook {
                 console.log('Recipes saved to Firebase');
             } catch (error) {
                 console.error('Error saving to Firebase:', error);
-                this.saveToLocalStorage();
             }
-        } else {
-            this.saveToLocalStorage();
         }
     }
 
@@ -137,6 +139,23 @@ class RecipeBook {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.closeModal();
+                this.closeDeleteModal();
+            }
+        });
+
+        // Delete modal buttons
+        document.getElementById('cancelDelete').addEventListener('click', () => {
+            this.closeDeleteModal();
+        });
+
+        document.getElementById('confirmDelete').addEventListener('click', () => {
+            this.confirmDelete();
+        });
+
+        // Close delete modal on backdrop click
+        document.getElementById('deleteModal').addEventListener('click', (e) => {
+            if (e.target.id === 'deleteModal') {
+                this.closeDeleteModal();
             }
         });
     }
@@ -201,7 +220,8 @@ class RecipeBook {
                     imageUrl,
                     updatedAt: new Date().toISOString()
                 };
-                await this.saveRecipes();
+                // Save in background
+                this.saveRecipes();
                 this.renderRecipes();
                 this.closeModal();
                 this.showToast('Рецепт успешно обновлен! ✏️');
@@ -221,7 +241,8 @@ class RecipeBook {
             };
 
             this.recipes.unshift(recipe);
-            await this.saveRecipes();
+            // Save in background
+            this.saveRecipes();
             this.renderRecipes();
             this.closeModal();
             this.showToast('Рецепт успешно добавлен! 🎉');
@@ -230,19 +251,33 @@ class RecipeBook {
 
     // Delete recipe
     async deleteRecipe(id) {
-        if (confirm('Вы уверены, что хотите удалить этот рецепт?')) {
+        this.recipeToDelete = id;
+        const deleteModal = document.getElementById('deleteModal');
+        deleteModal.classList.add('active');
+    }
+
+    // Confirm delete
+    confirmDelete() {
+        if (this.recipeToDelete) {
+            // Delete from Firebase in background
             if (useFirebase && db) {
-                try {
-                    await db.collection('recipes').doc(id).delete();
-                } catch (error) {
-                    console.error('Error deleting from Firebase:', error);
-                }
+                db.collection('recipes').doc(this.recipeToDelete).delete()
+                    .catch(error => console.error('Error deleting from Firebase:', error));
             }
-            this.recipes = this.recipes.filter(r => String(r.id) !== String(id));
-            await this.saveRecipes();
+            // Remove from array and save to localStorage
+            this.recipes = this.recipes.filter(r => String(r.id) !== String(this.recipeToDelete));
+            this.saveRecipes();
             this.renderRecipes();
             this.showToast('Рецепт удален 🗑️');
+            this.closeDeleteModal();
         }
+    }
+
+    // Close delete modal
+    closeDeleteModal() {
+        const deleteModal = document.getElementById('deleteModal');
+        deleteModal.classList.remove('active');
+        this.recipeToDelete = null;
     }
 
     // Toggle favorite

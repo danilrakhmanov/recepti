@@ -164,6 +164,19 @@
         <span class="toast-message">Рецепт успешно добавлен!</span>
     </div>
 
+    <!-- Delete Confirmation Modal -->
+    <div class="modal" id="deleteModal">
+        <div class="modal-content delete-modal-content">
+            <div class="delete-modal-icon">🗑️</div>
+            <h2 class="delete-modal-title">Удалить рецепт?</h2>
+            <p class="delete-modal-text">Это действие нельзя отменить. Вы уверены, что хотите удалить этот рецепт?</p>
+            <div class="delete-modal-actions">
+                <button class="delete-modal-btn cancel" id="cancelDelete">Отмена</button>
+                <button class="delete-modal-btn confirm" id="confirmDelete">Удалить</button>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
     
     <!-- Service Worker Registration -->
