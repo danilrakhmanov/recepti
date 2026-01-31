@@ -432,7 +432,7 @@ class RecipeBook {
                         <div class="recipe-actions-main">
                             ${timeHtml}
                             <a href="${this.escapeHtml(recipe.url)}" target="_blank" class="recipe-btn primary">
-                                <span>🔗</span>
+                                <span>🍽️</span>
                                 <span>Открыть</span>
                             </a>
                         </div>
