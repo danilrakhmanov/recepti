@@ -1,4 +1,4 @@
-const CACHE_NAME = 'recipe-book-v4';
+const CACHE_NAME = 'recipe-book-v7';
 const urlsToCache = [
     './',
     './index.html',
@@ -16,6 +16,8 @@ self.addEventListener('install', (event) => {
         caches.open(CACHE_NAME)
             .then((cache) => cache.addAll(urlsToCache))
     );
+    // Force the waiting service worker to become the active service worker
+    self.skipWaiting();
 });
 
 // Fetch event - serve from cache, fallback to network
@@ -65,4 +67,13 @@ self.addEventListener('activate', (event) => {
             );
         })
     );
+    // Take control of all pages immediately
+    return self.clients.claim();
+});
+
+// Handle messages from clients
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.action === 'skipWaiting') {
+        self.skipWaiting();
+    }
 });

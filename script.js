@@ -37,13 +37,11 @@ class RecipeBook {
         this.bindEvents();
         await this.loadRecipes();
         this.renderRecipes();
-        // Hide loading screen
-        setTimeout(() => {
-            const loadingScreen = document.getElementById('loadingScreen');
-            if (loadingScreen) {
-                loadingScreen.classList.add('hidden');
-            }
-        }, 500);
+        // Hide loading screen immediately
+        const loadingScreen = document.getElementById('loadingScreen');
+        if (loadingScreen) {
+            loadingScreen.classList.add('hidden');
+        }
     }
 
     // Load recipes from Firebase or localStorage
@@ -369,7 +367,7 @@ class RecipeBook {
             : '';
 
         return `
-            <div class="recipe-card" style="animation-delay: ${index * 0.1}s" data-id="${recipe.id}">
+            <div class="recipe-card" style="animation-delay: ${index * 0.05}s" data-id="${recipe.id}">
                 <div class="recipe-image">
                     ${imageHtml}
                 </div>
@@ -516,8 +514,59 @@ class ParticlesAnimation {
     }
 }
 
+// Parallax Effect
+class ParallaxEffect {
+    constructor() {
+        this.header = document.querySelector('.header');
+        this.title = document.querySelector('.title');
+        this.recipeCards = document.querySelectorAll('.recipe-card');
+        this.init();
+    }
+
+    init() {
+        window.addEventListener('scroll', () => this.handleScroll());
+        // Initial call
+        this.handleScroll();
+    }
+
+    handleScroll() {
+        const scrollY = window.scrollY;
+
+        // Parallax for header
+        if (this.header) {
+            const headerOffset = scrollY * 0.3;
+            this.header.style.transform = `translateY(${headerOffset}px)`;
+            this.header.style.opacity = Math.max(0, 1 - scrollY / 400);
+        }
+
+        // Parallax for title icons
+        if (this.title) {
+            const icons = this.title.querySelectorAll('.title-icon');
+            icons.forEach((icon, index) => {
+                const direction = index === 0 ? -1 : 1;
+                const iconOffset = scrollY * 0.1 * direction;
+                icon.style.transform = `translateY(${iconOffset}px) rotate(${scrollY * 0.05}deg)`;
+            });
+        }
+
+        // Parallax for recipe cards
+        this.recipeCards.forEach((card, index) => {
+            const cardTop = card.getBoundingClientRect().top;
+            const cardHeight = card.offsetHeight;
+            const windowHeight = window.innerHeight;
+
+            if (cardTop < windowHeight && cardTop > -cardHeight) {
+                const cardOffset = (windowHeight - cardTop) * 0.02;
+                const rotation = (windowHeight - cardTop) * 0.01;
+                card.style.transform = `translateY(${cardOffset}px) rotateX(${rotation}deg)`;
+            }
+        });
+    }
+}
+
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     new ParticlesAnimation();
+    new ParallaxEffect();
     new RecipeBook();
 });
