@@ -20,7 +20,7 @@
     --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
     --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.2);
     --border-radius: 16px;
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body {
@@ -312,25 +312,29 @@ body::before {
     line-height: 1.5;
 }
 
-.recipe-meta {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 15px;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-}
-
-.recipe-meta-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
 .recipe-actions {
     display: flex;
     gap: 10px;
     margin-top: auto;
+    align-items: center;
+}
+
+.recipe-actions-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.recipe-time {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: 8px 12px;
+    background: #f3f4f6;
+    border-radius: 8px;
 }
 
 .recipe-btn {

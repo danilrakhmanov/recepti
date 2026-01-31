@@ -180,12 +180,12 @@ class RecipeBook {
         if (confirm('Вы уверены, что хотите удалить этот рецепт?')) {
             if (useFirebase && db) {
                 try {
-                    await db.collection('recipes').doc(String(id)).delete();
+                    await db.collection('recipes').doc(id).delete();
                 } catch (error) {
                     console.error('Error deleting from Firebase:', error);
                 }
             }
-            this.recipes = this.recipes.filter(r => r.id !== id);
+            this.recipes = this.recipes.filter(r => String(r.id) !== String(id));
             await this.saveRecipes();
             this.renderRecipes();
             this.showToast('Рецепт удален 🗑️');
@@ -194,22 +194,30 @@ class RecipeBook {
 
     // Toggle favorite
     async toggleFavorite(id) {
-        const recipe = this.recipes.find(r => r.id === id);
+        const recipe = this.recipes.find(r => String(r.id) === String(id));
         if (recipe) {
             recipe.favorite = !recipe.favorite;
             
+            // Update button immediately without re-rendering
+            const btn = document.querySelector(`.favorite-btn[data-id="${id}"]`);
+            if (btn) {
+                btn.classList.toggle('active', recipe.favorite);
+            }
+            
+            // Show toast immediately
+            this.showToast(recipe.favorite ? 'Добавлено в избранное ❤️' : 'Удалено из избранного 💔');
+            
+            // Save in background
             if (useFirebase && db) {
                 try {
                     const { id: recipeId, ...recipeData } = recipe;
-                    await db.collection('recipes').doc(String(id)).set(recipeData);
+                    await db.collection('recipes').doc(id).set(recipeData);
                 } catch (error) {
                     console.error('Error updating favorite in Firebase:', error);
                 }
             }
             
             await this.saveRecipes();
-            this.renderRecipes();
-            this.showToast(recipe.favorite ? 'Добавлено в избранное ❤️' : 'Удалено из избранного 💔');
         }
     }
 
@@ -293,7 +301,7 @@ class RecipeBook {
             : `<span class="recipe-emoji">${this.getMealTypeEmoji(recipe.mealType)}</span>`;
 
         const timeHtml = recipe.cookingTime 
-            ? `<div class="recipe-meta-item">
+            ? `<div class="recipe-time">
                 <span>⏱️</span>
                 <span>${this.escapeHtml(recipe.cookingTime)}</span>
                </div>`
@@ -314,14 +322,14 @@ class RecipeBook {
                         <span class="recipe-type ${recipe.mealType}">${this.getMealTypeLabel(recipe.mealType)}</span>
                     </div>
                     ${descriptionHtml}
-                    <div class="recipe-meta">
-                        ${timeHtml}
-                    </div>
                     <div class="recipe-actions">
-                        <a href="${this.escapeHtml(recipe.url)}" target="_blank" class="recipe-btn primary">
-                            <span>🔗</span>
-                            <span>Открыть</span>
-                        </a>
+                        <div class="recipe-actions-main">
+                            ${timeHtml}
+                            <a href="${this.escapeHtml(recipe.url)}" target="_blank" class="recipe-btn primary">
+                                <span>🔗</span>
+                                <span>Открыть</span>
+                            </a>
+                        </div>
                         <button class="favorite-btn ${recipe.favorite ? 'active' : ''}" data-action="favorite" data-id="${recipe.id}"></button>
                         <button class="delete-btn" data-action="delete" data-id="${recipe.id}" title="Удалить">
                             <span>🗑️</span>
@@ -336,14 +344,14 @@ class RecipeBook {
     bindCardEvents() {
         document.querySelectorAll('.favorite-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const id = parseInt(btn.dataset.id);
+                const id = btn.dataset.id;
                 this.toggleFavorite(id);
             });
         });
 
         document.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const id = parseInt(btn.dataset.id);
+                const id = btn.dataset.id;
                 this.deleteRecipe(id);
             });
         });
