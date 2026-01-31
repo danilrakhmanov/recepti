@@ -358,9 +358,10 @@ class RecipeBook {
     // Get meal type label
     getMealTypeLabel(type) {
         const labels = {
-            first: '🍲 Первое блюдо',
-            second: '🍝 Второе блюдо',
-            dessert: '🍰 Десерт',
+            first: '🍲 Первые блюда',
+            second: '🍝 Вторые блюда',
+            salads: '🥗 Салаты',
+            dessert: '🍰 Десерты',
             snacks: '🥗 Закуски'
         };
         return labels[type] || type;
@@ -371,6 +372,7 @@ class RecipeBook {
         const emojis = {
             first: '🍲',
             second: '🍝',
+            salads: '🥗',
             dessert: '🍰',
             snacks: '🥗'
         };
