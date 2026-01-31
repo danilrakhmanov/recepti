@@ -158,6 +158,13 @@ class RecipeBook {
                 this.closeDeleteModal();
             }
         });
+
+        // Mobile navigation
+        document.querySelectorAll('.mobile-nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                this.setFilter(item.dataset.filter);
+            });
+        });
     }
 
     // Open modal
@@ -312,10 +319,15 @@ class RecipeBook {
     // Set filter
     setFilter(filter) {
         this.currentFilter = filter;
-        
+
         // Update active tab
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.filter === filter);
+        });
+
+        // Update mobile navigation
+        document.querySelectorAll('.mobile-nav-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.filter === filter);
         });
 
         this.renderRecipes();
@@ -458,9 +470,26 @@ class RecipeBook {
     }
 
     // Show toast notification
-    showToast(message) {
+    showToast(message, type = 'success') {
         const toast = document.getElementById('toast');
         const toastMessage = toast.querySelector('.toast-message');
+        const toastIcon = toast.querySelector('.toast-icon');
+
+        // Remove all type classes
+        toast.classList.remove('success', 'error', 'info', 'warning');
+
+        // Add type class
+        toast.classList.add(type);
+
+        // Update icon based on type
+        const icons = {
+            success: '✅',
+            error: '❌',
+            info: 'ℹ️',
+            warning: '⚠️'
+        };
+        toastIcon.textContent = icons[type] || icons.success;
+
         toastMessage.textContent = message;
         toast.classList.add('show');
 
@@ -599,8 +628,58 @@ class ParallaxEffect {
     }
 }
 
+// Ripple Effect for buttons
+function createRipple(event) {
+    const button = event.currentTarget;
+    const circle = document.createElement('span');
+    const diameter = Math.max(button.clientWidth, button.clientHeight);
+    const radius = diameter / 2;
+
+    circle.style.width = circle.style.height = `${diameter}px`;
+    circle.style.left = `${event.clientX - button.getBoundingClientRect().left - radius}px`;
+    circle.style.top = `${event.clientY - button.getBoundingClientRect().top - radius}px`;
+    circle.classList.add('ripple');
+
+    const ripple = button.getElementsByClassName('ripple')[0];
+    if (ripple) {
+        ripple.remove();
+    }
+
+    button.appendChild(circle);
+}
+
+// Theme Toggle
+function initThemeToggle() {
+    const themeToggle = document.getElementById('themeToggle');
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+
+    themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeIcon(newTheme);
+    });
+}
+
+function updateThemeIcon(theme) {
+    const themeIcon = document.querySelector('.theme-icon');
+    themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+}
+
+// Add ripple effect to all buttons
+document.addEventListener('DOMContentLoaded', () => {
+    const buttons = document.querySelectorAll('button, .recipe-btn');
+    buttons.forEach(button => {
+        button.addEventListener('click', createRipple);
+    });
+});
+
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+    initThemeToggle();
     new ParticlesAnimation();
     new ParallaxEffect();
     new RecipeBook();
