@@ -23,6 +23,811 @@ try {
     useFirebase = false;
 }
 
+// Recipe Parser Class
+class RecipeParser {
+    constructor() {
+        this.parsers = {
+            'povarenok.ru': this.parsePovarenok.bind(this),
+            'eda.ru': this.parseEda.bind(this),
+            'vkusno.ru': this.parseVkusno.bind(this),
+            'gotovim.ru': this.parseGotovim.bind(this),
+            'russianfood.com': this.parseRussianFood.bind(this),
+            'allrecipes.ru': this.parseAllRecipes.bind(this),
+            'default': this.parseGeneric.bind(this)
+        };
+    }
+
+    // Parse recipe from URL
+    async parseFromUrl(url) {
+        try {
+            // Use CORS proxy to fetch the page with timeout
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+            
+            // Create abort controller for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout
+
+            const response = await fetch(proxyUrl, {
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`Не удалось загрузить страницу. Код: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (!data.contents) {
+                throw new Error('Не удалось получить содержимое страницы');
+            }
+
+            // Parse HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(data.contents, 'text/html');
+
+            // Determine which parser to use based on domain
+            const domain = this.extractDomain(url);
+            const parseFunction = this.parsers[domain] || this.parsers['default'];
+
+            // Parse recipe data
+            const recipeData = parseFunction(doc, url);
+
+            // Log parsed data for debugging
+            console.log('Parsed recipe data:', recipeData);
+
+            return recipeData;
+        } catch (error) {
+            console.error('Error parsing recipe:', error);
+            if (error.name === 'AbortError') {
+                throw new Error('Превышено время ожидания. Попробуйте другой сайт.');
+            }
+            throw error;
+        }
+    }
+
+    // Extract domain from URL
+    extractDomain(url) {
+        try {
+            const urlObj = new URL(url);
+            const hostname = urlObj.hostname;
+            
+            // Check for known domains
+            if (hostname.includes('povarenok.ru')) return 'povarenok.ru';
+            if (hostname.includes('eda.ru')) return 'eda.ru';
+            if (hostname.includes('vkusno.ru')) return 'vkusno.ru';
+            if (hostname.includes('gotovim.ru')) return 'gotovim.ru';
+            if (hostname.includes('russianfood.com')) return 'russianfood.com';
+            if (hostname.includes('allrecipes.ru')) return 'allrecipes.ru';
+            
+            return 'default';
+        } catch (error) {
+            return 'default';
+        }
+    }
+
+    // Parse Povarenok.ru
+    parsePovarenok(doc, url) {
+        const recipe = {
+            name: '',
+            description: '',
+            cookingTime: '',
+            servings: '',
+            imageUrl: '',
+            ingredients: [],
+            steps: []
+        };
+
+        // Name
+        const nameEl = doc.querySelector('h1.recipe-title, h1.title, .recipe-header h1');
+        recipe.name = nameEl ? nameEl.textContent.trim() : '';
+
+        // Description
+        const descEl = doc.querySelector('.recipe-description, .description, .recipe-summary');
+        recipe.description = descEl ? descEl.textContent.trim() : '';
+
+        // Cooking time
+        const timeEl = doc.querySelector('.recipe-time, .cooking-time, .time');
+        recipe.cookingTime = timeEl ? timeEl.textContent.trim() : '';
+
+        // Servings
+        const servingsEl = doc.querySelector('.recipe-servings, .servings, .portions');
+        recipe.servings = servingsEl ? servingsEl.textContent.trim() : '';
+
+        // Image
+        const imgEl = doc.querySelector('.recipe-image img, .recipe-photo img, .main-photo img');
+        recipe.imageUrl = imgEl ? imgEl.src : '';
+
+        // Ingredients
+        const ingredientsList = doc.querySelectorAll('.recipe-ingredients li, .ingredients li, .ingredient-item');
+        ingredientsList.forEach(item => {
+            const text = item.textContent.trim();
+            if (text) {
+                // Try to separate name and quantity
+                const match = text.match(/^([^—–-]+)[—–-]?\s*(.*)$/);
+                if (match) {
+                    recipe.ingredients.push({
+                        name: match[1].trim(),
+                        quantity: match[2].trim()
+                    });
+                } else {
+                    recipe.ingredients.push({
+                        name: text,
+                        quantity: ''
+                    });
+                }
+            }
+        });
+
+        // Steps
+        const stepsList = doc.querySelectorAll('.recipe-steps li, .steps li, .instruction-step');
+        stepsList.forEach((step, index) => {
+            const text = step.textContent.trim();
+            if (text) {
+                recipe.steps.push({
+                    text: text,
+                    image: ''
+                });
+            }
+        });
+
+        return recipe;
+    }
+
+    // Parse Eda.ru
+    parseEda(doc, url) {
+        const recipe = {
+            name: '',
+            description: '',
+            cookingTime: '',
+            servings: '',
+            imageUrl: '',
+            ingredients: [],
+            steps: []
+        };
+
+        // Name
+        const nameEl = doc.querySelector('h1.recipe__name, h1.title');
+        recipe.name = nameEl ? nameEl.textContent.trim() : '';
+
+        // Description
+        const descEl = doc.querySelector('.recipe__description, .description');
+        recipe.description = descEl ? descEl.textContent.trim() : '';
+
+        // Cooking time
+        const timeEl = doc.querySelector('.recipe__time, .time');
+        recipe.cookingTime = timeEl ? timeEl.textContent.trim() : '';
+
+        // Servings
+        const servingsEl = doc.querySelector('.recipe__servings, .servings');
+        recipe.servings = servingsEl ? servingsEl.textContent.trim() : '';
+
+        // Image
+        const imgEl = doc.querySelector('.recipe__image img, .recipe-photo img');
+        recipe.imageUrl = imgEl ? imgEl.src : '';
+
+        // Ingredients
+        const ingredientsList = doc.querySelectorAll('.recipe__ingredients li, .ingredients-list li');
+        ingredientsList.forEach(item => {
+            const text = item.textContent.trim();
+            if (text) {
+                const match = text.match(/^([^—–-]+)[—–-]?\s*(.*)$/);
+                if (match) {
+                    recipe.ingredients.push({
+                        name: match[1].trim(),
+                        quantity: match[2].trim()
+                    });
+                } else {
+                    recipe.ingredients.push({
+                        name: text,
+                        quantity: ''
+                    });
+                }
+            }
+        });
+
+        // Steps
+        const stepsList = doc.querySelectorAll('.recipe__steps li, .steps-list li');
+        stepsList.forEach((step, index) => {
+            const text = step.textContent.trim();
+            if (text) {
+                recipe.steps.push({
+                    text: text,
+                    image: ''
+                });
+            }
+        });
+
+        return recipe;
+    }
+
+    // Parse Vkusno.ru
+    parseVkusno(doc, url) {
+        const recipe = {
+            name: '',
+            description: '',
+            cookingTime: '',
+            servings: '',
+            imageUrl: '',
+            ingredients: [],
+            steps: []
+        };
+
+        // Name
+        const nameEl = doc.querySelector('h1.recipe-title, h1');
+        recipe.name = nameEl ? nameEl.textContent.trim() : '';
+
+        // Description
+        const descEl = doc.querySelector('.recipe-desc, .description');
+        recipe.description = descEl ? descEl.textContent.trim() : '';
+
+        // Cooking time
+        const timeEl = doc.querySelector('.recipe-time, .time-info');
+        recipe.cookingTime = timeEl ? timeEl.textContent.trim() : '';
+
+        // Servings
+        const servingsEl = doc.querySelector('.recipe-servings, .servings-info');
+        recipe.servings = servingsEl ? servingsEl.textContent.trim() : '';
+
+        // Image
+        const imgEl = doc.querySelector('.recipe-img img, .main-image img');
+        recipe.imageUrl = imgEl ? imgEl.src : '';
+
+        // Ingredients
+        const ingredientsList = doc.querySelectorAll('.ingredients-list li, .ingredient');
+        ingredientsList.forEach(item => {
+            const text = item.textContent.trim();
+            if (text) {
+                const match = text.match(/^([^—–-]+)[—–-]?\s*(.*)$/);
+                if (match) {
+                    recipe.ingredients.push({
+                        name: match[1].trim(),
+                        quantity: match[2].trim()
+                    });
+                } else {
+                    recipe.ingredients.push({
+                        name: text,
+                        quantity: ''
+                    });
+                }
+            }
+        });
+
+        // Steps
+        const stepsList = doc.querySelectorAll('.steps-list li, .step');
+        stepsList.forEach((step, index) => {
+            const text = step.textContent.trim();
+            if (text) {
+                recipe.steps.push({
+                    text: text,
+                    image: ''
+                });
+            }
+        });
+
+        return recipe;
+    }
+
+    // Parse Gotovim.ru
+    parseGotovim(doc, url) {
+        const recipe = {
+            name: '',
+            description: '',
+            cookingTime: '',
+            servings: '',
+            imageUrl: '',
+            ingredients: [],
+            steps: []
+        };
+
+        // Name
+        const nameEl = doc.querySelector('h1.recipe-name, h1');
+        recipe.name = nameEl ? nameEl.textContent.trim() : '';
+
+        // Description
+        const descEl = doc.querySelector('.recipe-description, .desc');
+        recipe.description = descEl ? descEl.textContent.trim() : '';
+
+        // Cooking time
+        const timeEl = doc.querySelector('.recipe-time, .time');
+        recipe.cookingTime = timeEl ? timeEl.textContent.trim() : '';
+
+        // Servings
+        const servingsEl = doc.querySelector('.recipe-servings, .servings');
+        recipe.servings = servingsEl ? servingsEl.textContent.trim() : '';
+
+        // Image
+        const imgEl = doc.querySelector('.recipe-image img, .photo img');
+        recipe.imageUrl = imgEl ? imgEl.src : '';
+
+        // Ingredients
+        const ingredientsList = doc.querySelectorAll('.ingredients li, .ingredient-item');
+        ingredientsList.forEach(item => {
+            const text = item.textContent.trim();
+            if (text) {
+                const match = text.match(/^([^—–-]+)[—–-]?\s*(.*)$/);
+                if (match) {
+                    recipe.ingredients.push({
+                        name: match[1].trim(),
+                        quantity: match[2].trim()
+                    });
+                } else {
+                    recipe.ingredients.push({
+                        name: text,
+                        quantity: ''
+                    });
+                }
+            }
+        });
+
+        // Steps
+        const stepsList = doc.querySelectorAll('.steps li, .step-item');
+        stepsList.forEach((step, index) => {
+            const text = step.textContent.trim();
+            if (text) {
+                recipe.steps.push({
+                    text: text,
+                    image: ''
+                });
+            }
+        });
+
+        return recipe;
+    }
+
+    // Parse RussianFood.com
+    parseRussianFood(doc, url) {
+        const recipe = {
+            name: '',
+            description: '',
+            cookingTime: '',
+            servings: '',
+            imageUrl: '',
+            ingredients: [],
+            steps: []
+        };
+
+        // Name - try multiple selectors
+        const nameSelectors = [
+            'h1.title',
+            'h1.recipe-title',
+            'h1',
+            '.recipe-header h1',
+            '[itemprop="name"]'
+        ];
+        for (const selector of nameSelectors) {
+            const nameEl = doc.querySelector(selector);
+            if (nameEl && nameEl.textContent.trim()) {
+                recipe.name = nameEl.textContent.trim();
+                break;
+            }
+        }
+
+        // Description - try multiple selectors
+        const descSelectors = [
+            '.recipe-description',
+            '.description',
+            '.recipe-summary',
+            '[itemprop="description"]',
+            '.recipe-text'
+        ];
+        for (const selector of descSelectors) {
+            const descEl = doc.querySelector(selector);
+            if (descEl && descEl.textContent.trim()) {
+                recipe.description = descEl.textContent.trim();
+                break;
+            }
+        }
+
+        // Cooking time - try multiple selectors
+        const timeSelectors = [
+            '.recipe-time',
+            '.time',
+            '.cooking-time',
+            '[itemprop="totalTime"]',
+            '[itemprop="cookTime"]',
+            '.time-info'
+        ];
+        for (const selector of timeSelectors) {
+            const timeEl = doc.querySelector(selector);
+            if (timeEl && timeEl.textContent.trim()) {
+                recipe.cookingTime = timeEl.textContent.trim();
+                break;
+            }
+        }
+
+        // Servings - try multiple selectors
+        const servingsSelectors = [
+            '.recipe-servings',
+            '.servings',
+            '.portions',
+            '[itemprop="recipeYield"]',
+            '.servings-info'
+        ];
+        for (const selector of servingsSelectors) {
+            const servingsEl = doc.querySelector(selector);
+            if (servingsEl && servingsEl.textContent.trim()) {
+                recipe.servings = servingsEl.textContent.trim();
+                break;
+            }
+        }
+
+        // Image - try multiple selectors
+        const imgSelectors = [
+            '.recipe-image img',
+            '.photo img',
+            '.main-image img',
+            'img[itemprop="image"]',
+            '.recipe-photo img',
+            '.recipe-img img'
+        ];
+        for (const selector of imgSelectors) {
+            const imgEl = doc.querySelector(selector);
+            if (imgEl && imgEl.src) {
+                recipe.imageUrl = imgEl.src;
+                break;
+            }
+        }
+
+        // Ingredients - try multiple selectors
+        const ingredientsSelectors = [
+            '.ingredients li',
+            '.ingredient-list li',
+            '[itemprop="recipeIngredient"]',
+            '.recipe-ingredients li',
+            '.ingr-list li',
+            '.ingredient-item'
+        ];
+        for (const selector of ingredientsSelectors) {
+            const ingredientsList = doc.querySelectorAll(selector);
+            if (ingredientsList.length > 0) {
+                ingredientsList.forEach(item => {
+                    const text = item.textContent.trim();
+                    if (text) {
+                        const match = text.match(/^([^—–-]+)[—–-]?\s*(.*)$/);
+                        if (match) {
+                            recipe.ingredients.push({
+                                name: match[1].trim(),
+                                quantity: match[2].trim()
+                            });
+                        } else {
+                            recipe.ingredients.push({
+                                name: text,
+                                quantity: ''
+                            });
+                        }
+                    }
+                });
+                break;
+            }
+        }
+
+        // Steps - try multiple selectors
+        const stepsSelectors = [
+            '.steps li',
+            '.instructions li',
+            '[itemprop="recipeInstructions"]',
+            '.recipe-steps li',
+            '.step-list li',
+            '.step-item',
+            '.instruction-step'
+        ];
+        for (const selector of stepsSelectors) {
+            const stepsList = doc.querySelectorAll(selector);
+            if (stepsList.length > 0) {
+                stepsList.forEach((step, index) => {
+                    const text = step.textContent.trim();
+                    if (text) {
+                        recipe.steps.push({
+                            text: text,
+                            image: ''
+                        });
+                    }
+                });
+                break;
+            }
+        }
+
+        return recipe;
+    }
+
+    // Parse AllRecipes.ru
+    parseAllRecipes(doc, url) {
+        const recipe = {
+            name: '',
+            description: '',
+            cookingTime: '',
+            servings: '',
+            imageUrl: '',
+            ingredients: [],
+            steps: []
+        };
+
+        // Name
+        const nameEl = doc.querySelector('h1.recipe-title, h1');
+        recipe.name = nameEl ? nameEl.textContent.trim() : '';
+
+        // Description
+        const descEl = doc.querySelector('.recipe-description, .description');
+        recipe.description = descEl ? descEl.textContent.trim() : '';
+
+        // Cooking time
+        const timeEl = doc.querySelector('.recipe-time, .time');
+        recipe.cookingTime = timeEl ? timeEl.textContent.trim() : '';
+
+        // Servings
+        const servingsEl = doc.querySelector('.recipe-servings, .servings');
+        recipe.servings = servingsEl ? servingsEl.textContent.trim() : '';
+
+        // Image
+        const imgEl = doc.querySelector('.recipe-image img, .photo img');
+        recipe.imageUrl = imgEl ? imgEl.src : '';
+
+        // Ingredients
+        const ingredientsList = doc.querySelectorAll('.ingredients li, .ingredient-item');
+        ingredientsList.forEach(item => {
+            const text = item.textContent.trim();
+            if (text) {
+                const match = text.match(/^([^—–-]+)[—–-]?\s*(.*)$/);
+                if (match) {
+                    recipe.ingredients.push({
+                        name: match[1].trim(),
+                        quantity: match[2].trim()
+                    });
+                } else {
+                    recipe.ingredients.push({
+                        name: text,
+                        quantity: ''
+                    });
+                }
+            }
+        });
+
+        // Steps
+        const stepsList = doc.querySelectorAll('.steps li, .step-item');
+        stepsList.forEach((step, index) => {
+            const text = step.textContent.trim();
+            if (text) {
+                recipe.steps.push({
+                    text: text,
+                    image: ''
+                });
+            }
+        });
+
+        return recipe;
+    }
+
+    // Generic parser for unknown sites
+    parseGeneric(doc, url) {
+        const recipe = {
+            name: '',
+            description: '',
+            cookingTime: '',
+            servings: '',
+            imageUrl: '',
+            ingredients: [],
+            steps: []
+        };
+
+        console.log('Starting generic parser for:', url);
+
+        // Try to find title
+        const titleSelectors = [
+            'h1',
+            '.title',
+            '.recipe-title',
+            '[itemprop="name"]',
+            'h2',
+            '.recipe-name'
+        ];
+        for (const selector of titleSelectors) {
+            const titleEl = doc.querySelector(selector);
+            if (titleEl && titleEl.textContent.trim()) {
+                recipe.name = titleEl.textContent.trim();
+                console.log('Found title:', recipe.name);
+                break;
+            }
+        }
+
+        // Try to find description
+        const descSelectors = [
+            '.description',
+            '.recipe-description',
+            '[itemprop="description"]',
+            '.recipe-summary',
+            '.recipe-text',
+            'meta[name="description"]'
+        ];
+        for (const selector of descSelectors) {
+            const descEl = doc.querySelector(selector);
+            if (descEl) {
+                const text = descEl.textContent || descEl.content;
+                if (text && text.trim()) {
+                    recipe.description = text.trim();
+                    console.log('Found description:', recipe.description.substring(0, 50) + '...');
+                    break;
+                }
+            }
+        }
+
+        // Try to find cooking time
+        const timeSelectors = [
+            '.time',
+            '.cooking-time',
+            '[itemprop="totalTime"]',
+            '[itemprop="cookTime"]',
+            '.recipe-time',
+            '.time-info'
+        ];
+        for (const selector of timeSelectors) {
+            const timeEl = doc.querySelector(selector);
+            if (timeEl && timeEl.textContent.trim()) {
+                recipe.cookingTime = timeEl.textContent.trim();
+                console.log('Found cooking time:', recipe.cookingTime);
+                break;
+            }
+        }
+
+        // Try to find servings
+        const servingsSelectors = [
+            '.servings',
+            '.portions',
+            '[itemprop="recipeYield"]',
+            '.recipe-servings',
+            '.servings-info'
+        ];
+        for (const selector of servingsSelectors) {
+            const servingsEl = doc.querySelector(selector);
+            if (servingsEl && servingsEl.textContent.trim()) {
+                recipe.servings = servingsEl.textContent.trim();
+                console.log('Found servings:', recipe.servings);
+                break;
+            }
+        }
+
+        // Try to find image
+        const imgSelectors = [
+            'img[itemprop="image"]',
+            '.recipe-image img',
+            '.main-image img',
+            'img[src*="recipe"]',
+            '.recipe-photo img',
+            '.recipe-img img',
+            'meta[property="og:image"]'
+        ];
+        for (const selector of imgSelectors) {
+            const imgEl = doc.querySelector(selector);
+            if (imgEl) {
+                const src = imgEl.src || imgEl.content;
+                if (src) {
+                    recipe.imageUrl = src;
+                    console.log('Found image:', recipe.imageUrl);
+                    break;
+                }
+            }
+        }
+
+        // Try to find ingredients using JSON-LD
+        const jsonLdScript = doc.querySelector('script[type="application/ld+json"]');
+        if (jsonLdScript) {
+            try {
+                const jsonLd = JSON.parse(jsonLdScript.textContent);
+                console.log('Found JSON-LD:', jsonLd);
+                
+                if (jsonLd.recipeIngredient) {
+                    jsonLd.recipeIngredient.forEach(ing => {
+                        const text = typeof ing === 'string' ? ing : ing.text || '';
+                        if (text) {
+                            const match = text.match(/^([^—–-]+)[—–-]?\s*(.*)$/);
+                            if (match) {
+                                recipe.ingredients.push({
+                                    name: match[1].trim(),
+                                    quantity: match[2].trim()
+                                });
+                            } else {
+                                recipe.ingredients.push({
+                                    name: text,
+                                    quantity: ''
+                                });
+                            }
+                        }
+                    });
+                    console.log('Found ingredients from JSON-LD:', recipe.ingredients.length);
+                }
+
+                if (jsonLd.recipeInstructions) {
+                    jsonLd.recipeInstructions.forEach(step => {
+                        const text = typeof step === 'string' ? step : step.text || step.name || '';
+                        if (text) {
+                            recipe.steps.push({
+                                text: text,
+                                image: ''
+                            });
+                        }
+                    });
+                    console.log('Found steps from JSON-LD:', recipe.steps.length);
+                }
+            } catch (e) {
+                console.log('Error parsing JSON-LD:', e);
+            }
+        }
+
+        // If no ingredients from JSON-LD, try to find them in HTML
+        if (recipe.ingredients.length === 0) {
+            const ingredientsSelectors = [
+                '.ingredients li',
+                '.ingredient-list li',
+                '[itemprop="recipeIngredient"]',
+                '.recipe-ingredients li',
+                '.ingr-list li',
+                '.ingredient-item',
+                '.ingredients-list li'
+            ];
+
+            for (const selector of ingredientsSelectors) {
+                const items = doc.querySelectorAll(selector);
+                if (items.length > 0) {
+                    items.forEach(item => {
+                        const text = item.textContent.trim();
+                        if (text) {
+                            const match = text.match(/^([^—–-]+)[—–-]?\s*(.*)$/);
+                            if (match) {
+                                recipe.ingredients.push({
+                                    name: match[1].trim(),
+                                    quantity: match[2].trim()
+                                });
+                            } else {
+                                recipe.ingredients.push({
+                                    name: text,
+                                    quantity: ''
+                                });
+                            }
+                        }
+                    });
+                    console.log('Found ingredients from HTML:', recipe.ingredients.length);
+                    break;
+                }
+            }
+        }
+
+        // If no steps from JSON-LD, try to find them in HTML
+        if (recipe.steps.length === 0) {
+            const stepsSelectors = [
+                '.steps li',
+                '.instructions li',
+                '[itemprop="recipeInstructions"]',
+                '.recipe-steps li',
+                '.step-list li',
+                '.step-item',
+                '.instruction-step',
+                '.recipe-instructions li'
+            ];
+
+            for (const selector of stepsSelectors) {
+                const items = doc.querySelectorAll(selector);
+                if (items.length > 0) {
+                    items.forEach(item => {
+                        const text = item.textContent.trim();
+                        if (text) {
+                            recipe.steps.push({
+                                text: text,
+                                image: ''
+                            });
+                        }
+                    });
+                    console.log('Found steps from HTML:', recipe.steps.length);
+                    break;
+                }
+            }
+        }
+
+        console.log('Final parsed recipe:', recipe);
+        return recipe;
+    }
+}
+
 // Recipe Book Application
 class RecipeBook {
     constructor() {
@@ -35,6 +840,7 @@ class RecipeBook {
         this.shoppingList = null;
         this.currentRecipeId = null;
         this.originalServings = 4;
+        this.recipeParser = new RecipeParser();
         this.init();
     }
 
@@ -182,6 +988,14 @@ class RecipeBook {
             }
         });
 
+        // Open recipe button
+        document.getElementById('openRecipeBtn').addEventListener('click', () => {
+            const recipeUrl = document.getElementById('detailUrl').href;
+            if (recipeUrl && recipeUrl !== '#') {
+                window.open(recipeUrl, '_blank');
+            }
+        });
+
         // Mobile navigation
         document.querySelectorAll('.mobile-nav-item').forEach(item => {
             item.addEventListener('click', () => {
@@ -211,6 +1025,118 @@ class RecipeBook {
         document.getElementById('servingsInput').addEventListener('change', (e) => {
             this.adjustServings(0, parseInt(e.target.value));
         });
+
+        // Parse recipe from URL button
+        document.getElementById('parseBtn').addEventListener('click', () => {
+            this.parseRecipeFromUrl();
+        });
+    }
+
+    // Parse recipe from URL
+    async parseRecipeFromUrl() {
+        const urlInput = document.getElementById('recipeUrl');
+        const parseBtn = document.getElementById('parseBtn');
+        const url = urlInput.value.trim();
+
+        if (!url) {
+            this.showToast('Пожалуйста, введите URL рецепта', 'warning');
+            return;
+        }
+
+        // Validate URL
+        try {
+            new URL(url);
+        } catch (error) {
+            this.showToast('Некорректный URL', 'error');
+            return;
+        }
+
+        // Show loading state
+        parseBtn.disabled = true;
+        parseBtn.classList.add('loading');
+        parseBtn.innerHTML = '<span>🔄</span><span>Загрузка...</span>';
+
+        console.log('Starting to parse recipe from:', url);
+
+        try {
+            // Parse recipe using RecipeParser
+            const recipeData = await this.recipeParser.parseFromUrl(url);
+
+            console.log('Recipe data received:', recipeData);
+
+            // Check if we got any data
+            if (!recipeData.name && !recipeData.description && recipeData.ingredients.length === 0) {
+                throw new Error('Не удалось извлечь данные рецепта. Возможно, сайт не поддерживается.');
+            }
+
+            // Fill form with parsed data
+            if (recipeData.name) {
+                document.getElementById('recipeName').value = recipeData.name;
+                console.log('Filled name:', recipeData.name);
+            }
+
+            if (recipeData.description) {
+                document.getElementById('recipeDescription').value = recipeData.description;
+                console.log('Filled description');
+            }
+
+            if (recipeData.cookingTime) {
+                document.getElementById('cookingTime').value = recipeData.cookingTime;
+                console.log('Filled cooking time:', recipeData.cookingTime);
+            }
+
+            if (recipeData.servings) {
+                document.getElementById('servings').value = recipeData.servings;
+                console.log('Filled servings:', recipeData.servings);
+            }
+
+            if (recipeData.imageUrl) {
+                document.getElementById('imageUrl').value = recipeData.imageUrl;
+                console.log('Filled image URL');
+            }
+
+            // Fill ingredients
+            if (recipeData.ingredients && recipeData.ingredients.length > 0) {
+                const ingredientsContainer = document.getElementById('ingredientsContainer');
+                ingredientsContainer.innerHTML = '';
+                recipeData.ingredients.forEach(ing => {
+                    this.addIngredientField(ing.name, ing.quantity);
+                });
+                console.log('Filled ingredients:', recipeData.ingredients.length);
+            }
+
+            // Fill steps
+            if (recipeData.steps && recipeData.steps.length > 0) {
+                const stepsContainer = document.getElementById('stepsContainer');
+                stepsContainer.innerHTML = '';
+                recipeData.steps.forEach(step => {
+                    this.addStepField(step.text, step.image);
+                });
+                console.log('Filled steps:', recipeData.steps.length);
+            }
+
+            this.showToast(`Рецепт успешно загружен! ${recipeData.ingredients.length} ингредиентов, ${recipeData.steps.length} шагов ✅`, 'success');
+        } catch (error) {
+            console.error('Error parsing recipe:', error);
+            let errorMessage = 'Не удалось загрузить рецепт. ';
+            
+            if (error.message.includes('timeout') || error.message.includes('время')) {
+                errorMessage += 'Превышено время ожидания. Попробуйте другой сайт.';
+            } else if (error.message.includes('CORS') || error.message.includes('загрузить страницу')) {
+                errorMessage += 'Сайт блокирует доступ. Попробуйте другой сайт.';
+            } else if (error.message.includes('извлечь данные')) {
+                errorMessage += 'Сайт не поддерживается или структура изменилась.';
+            } else {
+                errorMessage += 'Проверьте URL и попробуйте снова.';
+            }
+            
+            this.showToast(errorMessage, 'error');
+        } finally {
+            // Reset button state
+            parseBtn.disabled = false;
+            parseBtn.classList.remove('loading');
+            parseBtn.innerHTML = '<span>🔄</span><span>Парсить</span>';
+        }
     }
 
     // Adjust servings and recalculate ingredients

@@ -201,7 +201,13 @@
 
                 <div class="form-group">
                     <label class="form-label">Ссылка на рецепт *</label>
-                    <input type="url" class="form-input" id="recipeUrl" required placeholder="https://...">
+                    <div class="url-input-group">
+                        <input type="url" class="form-input" id="recipeUrl" required placeholder="https://...">
+                        <button type="button" class="parse-btn" id="parseBtn" title="Автоматически заполнить форму">
+                            <span>🔄</span>
+                            <span>Парсить</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -293,8 +299,13 @@
     <div class="modal" id="recipeDetailModal">
         <div class="modal-content recipe-detail-content">
             <div class="recipe-detail-header">
-                <h2 class="recipe-detail-title" id="detailTitle">Название рецепта</h2>
-                <button class="close-btn" id="closeDetailModal">&times;</button>
+                <h2 class="recipe-detail-title" id="detailTitle">📖 Название рецепта</h2>
+                <div class="detail-header-buttons">
+                    <button class="open-recipe-btn" id="openRecipeBtn" title="Открыть рецепт">
+                        <span>🔗</span>
+                    </button>
+                    <button class="close-btn" id="closeDetailModal">&times;</button>
+                </div>
             </div>
             <div class="recipe-detail-body">
                 <div class="recipe-detail-image" id="detailImage">
@@ -311,7 +322,7 @@
                 </div>
                 <div class="recipe-detail-ingredients" id="detailIngredients" style="display: none;">
                     <div class="ingredients-header">
-                        <h3>🥕 Ингредиенты</h3>
+                        <h3>🥗 Ингредиенты</h3>
                         <div class="servings-adjuster">
                             <label for="servingsInput">Порций:</label>
                             <div class="servings-controls">
