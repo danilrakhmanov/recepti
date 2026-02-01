@@ -33,6 +33,8 @@ class RecipeBook {
         this.recipeToDelete = null;
         this.menuPlanner = null;
         this.shoppingList = null;
+        this.currentRecipeId = null;
+        this.originalServings = 4;
         this.init();
     }
 
@@ -196,6 +198,77 @@ class RecipeBook {
         document.getElementById('addStepBtn').addEventListener('click', () => {
             this.addStepField();
         });
+
+        // Servings controls
+        document.getElementById('decreaseServings').addEventListener('click', () => {
+            this.adjustServings(-1);
+        });
+
+        document.getElementById('increaseServings').addEventListener('click', () => {
+            this.adjustServings(1);
+        });
+
+        document.getElementById('servingsInput').addEventListener('change', (e) => {
+            this.adjustServings(0, parseInt(e.target.value));
+        });
+    }
+
+    // Adjust servings and recalculate ingredients
+    adjustServings(delta, newValue = null) {
+        const input = document.getElementById('servingsInput');
+        let currentServings = newValue !== null ? newValue : parseInt(input.value) || 1;
+
+        currentServings = Math.max(1, Math.min(50, currentServings + delta));
+        input.value = currentServings;
+
+        // Update servings display
+        document.getElementById('detailServings').textContent = `👥 ${currentServings} порций`;
+
+        // Recalculate ingredients
+        const recipe = this.recipes.find(r => String(r.id) === String(this.currentRecipeId));
+        if (recipe && recipe.ingredients) {
+            this.renderIngredients(recipe.ingredients, currentServings);
+        }
+    }
+
+    // Render ingredients with adjusted quantities
+    renderIngredients(ingredients, servings) {
+        const list = document.getElementById('detailIngredientsList');
+        const ratio = servings / this.originalServings;
+
+        list.innerHTML = ingredients.map(ing => {
+            let adjustedQuantity = ing.quantity || '';
+
+            if (adjustedQuantity && ratio !== 1) {
+                // Try to parse and adjust quantity
+                const parsed = this.parseQuantity(adjustedQuantity);
+                if (parsed) {
+                    adjustedQuantity = this.formatQuantity(parsed.value * ratio, parsed.unit);
+                }
+            }
+
+            const quantityHtml = adjustedQuantity ? ` — ${this.escapeHtml(adjustedQuantity)}` : '';
+            return `<li><strong>${this.escapeHtml(ing.name)}</strong>${quantityHtml}</li>`;
+        }).join('');
+    }
+
+    // Parse quantity into value and unit
+    parseQuantity(quantity) {
+        const match = quantity.match(/^([\d.,]+)\s*(.*)?$/);
+        if (match) {
+            return {
+                value: parseFloat(match[1]),
+                unit: match[2] || ''
+            };
+        }
+        return null;
+    }
+
+    // Format quantity with unit
+    formatQuantity(value, unit) {
+        // Round to reasonable precision
+        const rounded = Math.round(value * 100) / 100;
+        return unit ? `${rounded} ${unit}` : `${rounded}`;
     }
 
     // Add ingredient field
@@ -473,6 +546,10 @@ class RecipeBook {
         const recipe = this.recipes.find(r => String(r.id) === String(id));
         if (!recipe) return;
 
+        // Store current recipe ID and original servings for calculation
+        this.currentRecipeId = id;
+        this.originalServings = recipe.servings || 4;
+
         // Fill modal with recipe data
         document.getElementById('detailTitle').textContent = recipe.name;
         document.getElementById('detailType').textContent = this.getMealTypeLabel(recipe.mealType);
@@ -480,6 +557,10 @@ class RecipeBook {
         document.getElementById('detailServings').textContent = recipe.servings ? `👥 ${recipe.servings} порций` : '';
         document.getElementById('detailDescription').textContent = recipe.description || 'Описание отсутствует';
         document.getElementById('detailUrl').href = recipe.url;
+
+        // Set servings input value
+        const servingsInput = document.getElementById('servingsInput');
+        servingsInput.value = this.originalServings;
 
         // Handle image
         const detailImage = document.getElementById('detailImage');
@@ -494,10 +575,7 @@ class RecipeBook {
         const detailIngredientsList = document.getElementById('detailIngredientsList');
         if (recipe.ingredients && recipe.ingredients.length > 0) {
             detailIngredients.style.display = 'block';
-            detailIngredientsList.innerHTML = recipe.ingredients.map(ing => {
-                const quantity = ing.quantity ? ` — ${this.escapeHtml(ing.quantity)}` : '';
-                return `<li><strong>${this.escapeHtml(ing.name)}</strong>${quantity}</li>`;
-            }).join('');
+            this.renderIngredients(recipe.ingredients, this.originalServings);
         } else {
             detailIngredients.style.display = 'none';
         }
@@ -753,10 +831,10 @@ class RecipeBook {
                     <div class="recipe-actions">
                         <div class="recipe-actions-main">
                             ${timeHtml}
-                            <a href="${this.escapeHtml(recipe.url)}" target="_blank" class="recipe-btn primary">
+                            <button class="recipe-btn primary" data-action="open-recipe" data-url="${this.escapeHtml(recipe.url)}">
                                 <span>🍽️</span>
                                 <span>Открыть</span>
-                            </a>
+                            </button>
                         </div>
                         <button class="edit-btn" data-action="edit" data-id="${recipe.id}" title="Редактировать">
                             <span>✏️</span>
@@ -801,6 +879,8 @@ class RecipeBook {
         document.querySelectorAll('.recipe-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
+                const id = btn.closest('.recipe-card').dataset.id;
+                this.openDetailModal(id);  // Открывает модальное окно с деталями
             });
         });
 

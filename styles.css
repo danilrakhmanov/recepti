@@ -3239,11 +3239,117 @@ body::before {
     background: rgba(255, 255, 255, 0.05);
 }
 
-.recipe-detail-ingredients h3 {
+.ingredients-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.ingredients-header h3 {
     font-size: 1.1rem;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 15px;
+    margin: 0;
+}
+
+.servings-adjuster {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.servings-adjuster label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.servings-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.servings-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.servings-btn:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-md);
+}
+
+.servings-btn:active {
+    transform: scale(0.95);
+}
+
+#servingsInput {
+    width: 60px;
+    height: 36px;
+    padding: 0 10px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    font-family: 'Comfortaa', cursive;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+#servingsInput:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow:
+        0 0 0 4px rgba(255, 107, 157, 0.2),
+        0 0 20px rgba(255, 107, 157, 0.1);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .ingredients-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .servings-adjuster {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .servings-controls {
+        gap: 3px;
+    }
+
+    .servings-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 1rem;
+    }
+
+    #servingsInput {
+        width: 50px;
+        height: 32px;
+        font-size: 0.9rem;
+    }
 }
 
 .recipe-detail-ingredients ul {
