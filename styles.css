@@ -1537,6 +1537,14 @@ body::before {
     box-shadow: 0 4px 12px rgba(255, 107, 157, 0.4);
 }
 
+.mobile-nav-item.active .mobile-nav-label {
+    color: white;
+}
+
+.mobile-nav-item.active:hover .mobile-nav-label {
+    color: white;
+}
+
 .mobile-nav-item.active::before {
     width: 100%;
 }
@@ -1581,6 +1589,14 @@ body::before {
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
+.favorites-nav-item.active .mobile-nav-label {
+    color: white;
+}
+
+.favorites-nav-item.active:hover .mobile-nav-label {
+    color: white;
+}
+
 .favorites-nav-item::before {
     background: linear-gradient(90deg, #ef4444, #dc2626);
 }
@@ -1593,6 +1609,14 @@ body::before {
     background: linear-gradient(135deg, #dc2626, #b91c1c);
     color: white;
     box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+[data-theme="dark"] .favorites-nav-item.active .mobile-nav-label {
+    color: white;
+}
+
+[data-theme="dark"] .favorites-nav-item.active:hover .mobile-nav-label {
+    color: white;
 }
 
 [data-theme="dark"] .favorites-nav-item::before {
@@ -1652,14 +1676,63 @@ body::before {
 
     .recipe-card {
         border-radius: 14px;
+        transition: none;
+        animation: none;
+    }
+
+    .recipe-card:active {
+        transform: none;
+    }
+
+    .recipe-card:hover {
+        transform: none;
+        box-shadow: var(--shadow-md);
+    }
+
+    .recipe-card:hover::after {
+        opacity: 0;
+    }
+
+    .recipe-card:hover::before {
+        opacity: 0;
+    }
+
+    .recipe-card:hover .recipe-image::before {
+        opacity: 0;
+    }
+
+    .recipe-card:hover .recipe-image img {
+        transform: none;
+    }
+
+    .recipe-card:hover .recipe-emoji {
+        transform: none;
+    }
+
+    .recipe-card:hover .recipe-title {
+        color: var(--text-primary);
     }
 
     .recipe-image {
         height: 180px;
+        transition: none;
+    }
+
+    .recipe-image::before {
+        transition: none;
+    }
+
+    .recipe-image img {
+        transition: none;
+    }
+
+    .recipe-emoji {
+        transition: none;
     }
 
     .recipe-title {
         font-size: 1.15rem;
+        transition: none;
     }
 
     .recipe-type {
