@@ -215,8 +215,51 @@
                 </div>
 
                 <div class="form-group">
+                    <label class="form-label">Количество порций (необязательно)</label>
+                    <input type="number" class="form-input" id="servings" min="1" placeholder="Например: 4">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ингредиенты (необязательно)</label>
+                    <div class="ingredients-container" id="ingredientsContainer">
+                        <div class="ingredient-item">
+                            <input type="text" class="form-input ingredient-name" placeholder="Название ингредиента">
+                            <input type="text" class="form-input ingredient-quantity" placeholder="Количество">
+                            <button type="button" class="remove-ingredient-btn" style="display: none;">✕</button>
+                        </div>
+                    </div>
+                    <button type="button" class="add-ingredient-btn" id="addIngredientBtn">
+                        <span>➕</span>
+                        <span>Добавить ингредиент</span>
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Пошаговая инструкция (необязательно)</label>
+                    <div class="steps-container" id="stepsContainer">
+                        <div class="step-item">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <textarea class="form-textarea step-text" rows="2" placeholder="Опишите шаг приготовления..."></textarea>
+                                <input type="url" class="form-input step-image" placeholder="URL фото шага (необязательно)">
+                            </div>
+                            <button type="button" class="remove-step-btn" style="display: none;">✕</button>
+                        </div>
+                    </div>
+                    <button type="button" class="add-step-btn" id="addStepBtn">
+                        <span>➕</span>
+                        <span>Добавить шаг</span>
+                    </button>
+                </div>
+
+                <div class="form-group">
                     <label class="form-label">URL изображения (необязательно)</label>
                     <input type="url" class="form-input" id="imageUrl" placeholder="https://...">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ссылка на видео (необязательно)</label>
+                    <input type="url" class="form-input" id="videoUrl" placeholder="https://youtube.com/...">
                 </div>
 
                 <button type="submit" class="submit-btn">
@@ -260,10 +303,28 @@
                 <div class="recipe-detail-info">
                     <div class="recipe-detail-type" id="detailType">🍽️ Тип блюда</div>
                     <div class="recipe-detail-time" id="detailTime">⏱️ Время приготовления</div>
+                    <div class="recipe-detail-servings" id="detailServings">👥 Порции</div>
                 </div>
                 <div class="recipe-detail-description">
                     <h3>Описание</h3>
                     <p id="detailDescription">Описание рецепта...</p>
+                </div>
+                <div class="recipe-detail-ingredients" id="detailIngredients" style="display: none;">
+                    <h3>🥕 Ингредиенты</h3>
+                    <ul id="detailIngredientsList"></ul>
+                </div>
+                <div class="recipe-detail-steps" id="detailSteps" style="display: none;">
+                    <h3>📝 Пошаговая инструкция</h3>
+                    <div id="detailStepsList"></div>
+                </div>
+                <div class="recipe-detail-video" id="detailVideo" style="display: none;">
+                    <h3>🎬 Видео-инструкция</h3>
+                    <div class="video-preview" id="videoPreview">
+                        <div class="video-preview-placeholder">
+                            <span class="video-preview-icon">▶️</span>
+                            <span class="video-preview-text">Загрузка превью...</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="recipe-detail-actions">
                     <a href="#" target="_blank" class="recipe-btn primary" id="detailUrl">

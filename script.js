@@ -186,6 +186,80 @@ class RecipeBook {
                 this.setFilter(item.dataset.filter);
             });
         });
+
+        // Add ingredient button
+        document.getElementById('addIngredientBtn').addEventListener('click', () => {
+            this.addIngredientField();
+        });
+
+        // Add step button
+        document.getElementById('addStepBtn').addEventListener('click', () => {
+            this.addStepField();
+        });
+    }
+
+    // Add ingredient field
+    addIngredientField(name = '', quantity = '') {
+        const container = document.getElementById('ingredientsContainer');
+        const item = document.createElement('div');
+        item.className = 'ingredient-item';
+        item.innerHTML = `
+            <input type="text" class="form-input ingredient-name" placeholder="Название ингредиента" value="${this.escapeHtml(name)}">
+            <input type="text" class="form-input ingredient-quantity" placeholder="Количество" value="${this.escapeHtml(quantity)}">
+            <button type="button" class="remove-ingredient-btn">✕</button>
+        `;
+        container.appendChild(item);
+
+        // Add remove button handler
+        item.querySelector('.remove-ingredient-btn').addEventListener('click', () => {
+            item.remove();
+            this.updateRemoveButtons();
+        });
+
+        this.updateRemoveButtons();
+    }
+
+    // Add step field
+    addStepField(text = '', image = '') {
+        const container = document.getElementById('stepsContainer');
+        const stepNumber = container.children.length + 1;
+        const item = document.createElement('div');
+        item.className = 'step-item';
+        item.innerHTML = `
+            <div class="step-number">${stepNumber}</div>
+            <div class="step-content">
+                <textarea class="form-textarea step-text" rows="2" placeholder="Опишите шаг приготовления...">${this.escapeHtml(text)}</textarea>
+                <input type="url" class="form-input step-image" placeholder="URL фото шага (необязательно)" value="${this.escapeHtml(image)}">
+            </div>
+            <button type="button" class="remove-step-btn">✕</button>
+        `;
+        container.appendChild(item);
+
+        // Add remove button handler
+        item.querySelector('.remove-step-btn').addEventListener('click', () => {
+            item.remove();
+            this.updateStepNumbers();
+        });
+    }
+
+    // Update remove buttons visibility
+    updateRemoveButtons() {
+        const items = document.querySelectorAll('.ingredient-item');
+        items.forEach((item, index) => {
+            const btn = item.querySelector('.remove-ingredient-btn');
+            btn.style.display = items.length > 1 ? 'block' : 'none';
+        });
+    }
+
+    // Update step numbers
+    updateStepNumbers() {
+        const items = document.querySelectorAll('.step-item');
+        items.forEach((item, index) => {
+            const number = item.querySelector('.step-number');
+            const btn = item.querySelector('.remove-step-btn');
+            number.textContent = index + 1;
+            btn.style.display = items.length > 1 ? 'block' : 'none';
+        });
     }
 
     // Open modal
@@ -193,6 +267,20 @@ class RecipeBook {
         this.editingId = null;
         document.querySelector('.modal-title').textContent = 'Добавить рецепт';
         document.querySelector('.submit-btn .btn-text').textContent = 'Сохранить рецепт';
+
+        // Reset form
+        document.getElementById('recipeForm').reset();
+
+        // Reset ingredients
+        const ingredientsContainer = document.getElementById('ingredientsContainer');
+        ingredientsContainer.innerHTML = '';
+        this.addIngredientField();
+
+        // Reset steps
+        const stepsContainer = document.getElementById('stepsContainer');
+        stepsContainer.innerHTML = '';
+        this.addStepField();
+
         document.getElementById('modal').classList.add('active');
         document.body.style.overflow = 'hidden';
         document.getElementById('recipeName').focus();
@@ -214,6 +302,33 @@ class RecipeBook {
         document.getElementById('recipeDescription').value = recipe.description || '';
         document.getElementById('cookingTime').value = recipe.cookingTime || '';
         document.getElementById('imageUrl').value = recipe.imageUrl || '';
+        document.getElementById('servings').value = recipe.servings || '';
+        document.getElementById('videoUrl').value = recipe.videoUrl || '';
+
+        // Fill ingredients
+        const ingredientsContainer = document.getElementById('ingredientsContainer');
+        ingredientsContainer.innerHTML = '';
+        if (recipe.ingredients && recipe.ingredients.length > 0) {
+            recipe.ingredients.forEach(ing => {
+                this.addIngredientField(ing.name, ing.quantity);
+            });
+        } else {
+            this.addIngredientField();
+        }
+
+        // Fill steps
+        const stepsContainer = document.getElementById('stepsContainer');
+        stepsContainer.innerHTML = '';
+        if (recipe.steps && recipe.steps.length > 0) {
+            recipe.steps.forEach(step => {
+                // Handle both old format (string) and new format (object with text and image)
+                const stepText = typeof step === 'string' ? step : step.text;
+                const stepImage = typeof step === 'object' && step.image ? step.image : '';
+                this.addStepField(stepText, stepImage);
+            });
+        } else {
+            this.addStepField();
+        }
 
         document.getElementById('modal').classList.add('active');
         document.getElementById('recipeName').focus();
@@ -224,6 +339,17 @@ class RecipeBook {
         document.getElementById('modal').classList.remove('active');
         document.body.style.overflow = '';
         document.getElementById('recipeForm').reset();
+
+        // Reset ingredients
+        const ingredientsContainer = document.getElementById('ingredientsContainer');
+        ingredientsContainer.innerHTML = '';
+        this.addIngredientField();
+
+        // Reset steps
+        const stepsContainer = document.getElementById('stepsContainer');
+        stepsContainer.innerHTML = '';
+        this.addStepField();
+
         this.editingId = null;
     }
 
@@ -235,6 +361,28 @@ class RecipeBook {
         const description = document.getElementById('recipeDescription').value.trim();
         const cookingTime = document.getElementById('cookingTime').value.trim();
         const imageUrl = document.getElementById('imageUrl').value.trim();
+        const servings = document.getElementById('servings').value.trim();
+        const videoUrl = document.getElementById('videoUrl').value.trim();
+
+        // Collect ingredients
+        const ingredients = [];
+        document.querySelectorAll('.ingredient-item').forEach(item => {
+            const name = item.querySelector('.ingredient-name').value.trim();
+            const quantity = item.querySelector('.ingredient-quantity').value.trim();
+            if (name) {
+                ingredients.push({ name, quantity });
+            }
+        });
+
+        // Collect steps
+        const steps = [];
+        document.querySelectorAll('.step-item').forEach(item => {
+            const text = item.querySelector('.step-text').value.trim();
+            const image = item.querySelector('.step-image').value.trim();
+            if (text) {
+                steps.push({ text, image });
+            }
+        });
 
         if (this.editingId) {
             // Update existing recipe
@@ -248,6 +396,10 @@ class RecipeBook {
                     description,
                     cookingTime,
                     imageUrl,
+                    servings,
+                    videoUrl,
+                    ingredients,
+                    steps,
                     updatedAt: new Date().toISOString()
                 };
                 // Save in background
@@ -266,6 +418,10 @@ class RecipeBook {
                 description,
                 cookingTime,
                 imageUrl,
+                servings,
+                videoUrl,
+                ingredients,
+                steps,
                 favorite: false,
                 createdAt: new Date().toISOString()
             };
@@ -321,6 +477,7 @@ class RecipeBook {
         document.getElementById('detailTitle').textContent = recipe.name;
         document.getElementById('detailType').textContent = this.getMealTypeLabel(recipe.mealType);
         document.getElementById('detailTime').textContent = recipe.cookingTime ? `⏱️ ${recipe.cookingTime}` : '';
+        document.getElementById('detailServings').textContent = recipe.servings ? `👥 ${recipe.servings} порций` : '';
         document.getElementById('detailDescription').textContent = recipe.description || 'Описание отсутствует';
         document.getElementById('detailUrl').href = recipe.url;
 
@@ -330,6 +487,79 @@ class RecipeBook {
             detailImage.innerHTML = `<img src="${this.escapeHtml(recipe.imageUrl)}" alt="${this.escapeHtml(recipe.name)}" onerror="this.parentElement.innerHTML='<span class=\\'recipe-emoji\\'>${this.getMealTypeEmoji(recipe.mealType)}</span>'">`;
         } else {
             detailImage.innerHTML = `<span class="recipe-emoji">${this.getMealTypeEmoji(recipe.mealType)}</span>`;
+        }
+
+        // Handle ingredients
+        const detailIngredients = document.getElementById('detailIngredients');
+        const detailIngredientsList = document.getElementById('detailIngredientsList');
+        if (recipe.ingredients && recipe.ingredients.length > 0) {
+            detailIngredients.style.display = 'block';
+            detailIngredientsList.innerHTML = recipe.ingredients.map(ing => {
+                const quantity = ing.quantity ? ` — ${this.escapeHtml(ing.quantity)}` : '';
+                return `<li><strong>${this.escapeHtml(ing.name)}</strong>${quantity}</li>`;
+            }).join('');
+        } else {
+            detailIngredients.style.display = 'none';
+        }
+
+        // Handle steps
+        const detailSteps = document.getElementById('detailSteps');
+        const detailStepsList = document.getElementById('detailStepsList');
+        if (recipe.steps && recipe.steps.length > 0) {
+            detailSteps.style.display = 'block';
+            detailStepsList.innerHTML = recipe.steps.map((step, index) => {
+                // Handle both old format (string) and new format (object with text and image)
+                const stepText = typeof step === 'string' ? step : step.text;
+                const stepImage = typeof step === 'object' && step.image ? step.image : '';
+                const imageHtml = stepImage ? `
+                    <div class="detail-step-image">
+                        <img src="${this.escapeHtml(stepImage)}" alt="Шаг ${index + 1}" onerror="this.style.display='none'">
+                    </div>
+                ` : '';
+                return `
+                    <div class="detail-step">
+                        <div class="detail-step-number">${index + 1}</div>
+                        <div class="detail-step-content">
+                            <div class="detail-step-text">${this.escapeHtml(stepText)}</div>
+                            ${imageHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            detailSteps.style.display = 'none';
+        }
+
+        // Handle video
+        const detailVideo = document.getElementById('detailVideo');
+        const videoPreview = document.getElementById('videoPreview');
+        if (recipe.videoUrl) {
+            detailVideo.style.display = 'block';
+
+            // Try to get YouTube video ID and create embed
+            const youtubeMatch = recipe.videoUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+            if (youtubeMatch) {
+                const videoId = youtubeMatch[1];
+                videoPreview.innerHTML = `
+                    <iframe
+                        src="https://www.youtube.com/embed/${videoId}"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen
+                        class="video-iframe">
+                    </iframe>
+                `;
+            } else {
+                // For other video platforms, show placeholder
+                videoPreview.innerHTML = `
+                    <div class="video-preview-placeholder">
+                        <span class="video-preview-icon">▶️</span>
+                        <span class="video-preview-text">Откройте ссылку на видео</span>
+                    </div>
+                `;
+            }
+        } else {
+            detailVideo.style.display = 'none';
         }
 
         // Show modal
@@ -497,14 +727,22 @@ class RecipeBook {
                </div>`
             : '';
 
-        const descriptionHtml = recipe.description 
+        const descriptionHtml = recipe.description
             ? `<p class="recipe-description">${this.escapeHtml(recipe.description)}</p>`
+            : '';
+
+        const videoHtml = recipe.videoUrl
+            ? `<a href="${this.escapeHtml(recipe.videoUrl)}" target="_blank" class="recipe-video-badge">
+                <span>▶️</span>
+                <span>Видео</span>
+               </a>`
             : '';
 
         return `
             <div class="recipe-card" style="animation-delay: ${index * 0.05}s" data-id="${recipe.id}">
                 <div class="recipe-image">
                     ${imageHtml}
+                    ${videoHtml}
                 </div>
                 <div class="recipe-content">
                     <div class="recipe-header">
