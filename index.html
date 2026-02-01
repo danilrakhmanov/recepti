@@ -63,6 +63,18 @@
             <span class="btn-text">Добавить рецепт</span>
         </button>
 
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <button class="quick-action-btn planner-quick-btn" data-filter="planner">
+                <span class="quick-action-icon">📅</span>
+                <span class="quick-action-text">Меню</span>
+            </button>
+            <button class="quick-action-btn shopping-quick-btn" data-filter="shopping">
+                <span class="quick-action-icon">🛒</span>
+                <span class="quick-action-text">Покупки</span>
+            </button>
+        </div>
+
         <!-- Search Bar -->
         <div class="search-container">
             <input type="text" class="search-input" id="searchInput" placeholder="🔍 Поиск рецептов...">
@@ -108,6 +120,49 @@
         <!-- Recipe Grid -->
         <div class="recipe-grid" id="recipeGrid">
             <!-- Recipes will be dynamically added here -->
+        </div>
+
+        <!-- Weekly Menu Planner -->
+        <div class="menu-planner" id="menuPlanner" style="display: none;">
+            <div class="planner-header">
+                <h2 class="planner-title"><span class="planner-emoji">📅</span> <span class="planner-text">Меню на неделю</span></h2>
+                <button class="planner-action-btn" id="generateShoppingListBtn">
+                    <span>🛒</span>
+                    <span>Сформировать список покупок</span>
+                </button>
+            </div>
+            <div class="week-grid" id="weekGrid">
+                <!-- Days will be dynamically added here -->
+            </div>
+        </div>
+
+        <!-- Shopping List -->
+        <div class="shopping-list" id="shoppingList" style="display: none;">
+            <div class="shopping-header">
+                <h2 class="shopping-title"><span class="shopping-emoji">🛒</span> <span class="shopping-text">Список покупок</span></h2>
+                <div class="shopping-actions">
+                    <button class="shopping-action-btn primary" id="addShoppingItemBtn">
+                        <span>➕</span>
+                        <span>Добавить</span>
+                    </button>
+                    <button class="shopping-action-btn warning" id="clearCompletedBtn">
+                        <span>✅</span>
+                        <span>Очистить выполненные</span>
+                    </button>
+                    <button class="shopping-action-btn danger" id="clearAllBtn">
+                        <span>🗑️</span>
+                        <span>Очистить всё</span>
+                    </button>
+                </div>
+            </div>
+            <div class="shopping-items" id="shoppingItems">
+                <!-- Shopping items will be dynamically added here -->
+            </div>
+            <div class="shopping-empty" id="shoppingEmpty">
+                <div class="shopping-empty-icon">🛒</div>
+                <h3>Список покупок пуст</h3>
+                <p>Добавьте товары или сформируйте список из меню</p>
+            </div>
         </div>
 
         <!-- Empty State -->
@@ -217,6 +272,45 @@
                     </a>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Add Shopping Item Modal -->
+    <div class="modal" id="shoppingModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Добавить товар</h2>
+                <button class="close-btn" id="closeShoppingModal">&times;</button>
+            </div>
+            <form class="shopping-form" id="shoppingForm">
+                <div class="form-group">
+                    <label class="form-label">Название товара *</label>
+                    <input type="text" class="form-input" id="shoppingItemName" required placeholder="Например: Молоко">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Количество (необязательно)</label>
+                    <input type="text" class="form-input" id="shoppingItemQuantity" placeholder="Например: 2 л">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Категория (необязательно)</label>
+                    <select class="form-select" id="shoppingItemCategory">
+                        <option value="">Без категории</option>
+                        <option value="vegetables">🥕 Овощи</option>
+                        <option value="fruits">🍎 Фрукты</option>
+                        <option value="meat">🥩 Мясо</option>
+                        <option value="fish">🐟 Рыба</option>
+                        <option value="dairy">🧀 Молочные продукты</option>
+                        <option value="bakery">🍞 Выпечка</option>
+                        <option value="drinks">🥤 Напитки</option>
+                        <option value="snacks">🍿 Закуски</option>
+                        <option value="other">📦 Другое</option>
+                    </select>
+                </div>
+                <button type="submit" class="submit-btn">
+                    <span class="btn-icon">💾</span>
+                    <span class="btn-text">Добавить в список</span>
+                </button>
+            </form>
         </div>
     </div>
 

@@ -31,6 +31,8 @@ class RecipeBook {
         this.searchQuery = '';
         this.editingId = null;
         this.recipeToDelete = null;
+        this.menuPlanner = null;
+        this.shoppingList = null;
         this.init();
     }
 
@@ -102,6 +104,13 @@ class RecipeBook {
         // Add recipe button
         document.getElementById('addRecipeBtn').addEventListener('click', () => {
             this.openModal();
+        });
+
+        // Quick action buttons
+        document.querySelectorAll('.quick-action-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.setFilter(btn.dataset.filter);
+            });
         });
 
         // Close modal
@@ -377,7 +386,36 @@ class RecipeBook {
             item.classList.toggle('active', item.dataset.filter === filter);
         });
 
-        this.renderRecipes();
+        // Handle different views
+        const recipeGrid = document.getElementById('recipeGrid');
+        const menuPlanner = document.getElementById('menuPlanner');
+        const shoppingList = document.getElementById('shoppingList');
+        const emptyState = document.getElementById('emptyState');
+
+        if (filter === 'planner') {
+            recipeGrid.style.display = 'none';
+            emptyState.style.display = 'none';
+            menuPlanner.style.display = 'block';
+            shoppingList.style.display = 'none';
+            if (!this.menuPlanner) {
+                this.menuPlanner = new MenuPlanner(this);
+            }
+        } else if (filter === 'shopping') {
+            recipeGrid.style.display = 'none';
+            emptyState.style.display = 'none';
+            menuPlanner.style.display = 'none';
+            shoppingList.style.display = 'block';
+            if (!this.shoppingList) {
+                this.shoppingList = new ShoppingList(this);
+            } else {
+                this.shoppingList.renderItems();
+            }
+        } else {
+            recipeGrid.style.display = 'grid';
+            menuPlanner.style.display = 'none';
+            shoppingList.style.display = 'none';
+            this.renderRecipes();
+        }
     }
 
     // Get filtered recipes
@@ -697,6 +735,459 @@ class ParallaxEffect {
 }
 
 // Ripple Effect for buttons
+// Menu Planner Class
+class MenuPlanner {
+    constructor(recipeBook) {
+        this.recipeBook = recipeBook;
+        this.days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+        this.mealTypes = ['breakfast', 'lunch', 'dinner'];
+        this.mealLabels = {
+            breakfast: '🌅 Завтрак',
+            lunch: '☀️ Обед',
+            dinner: '🌙 Ужин'
+        };
+        this.menu = this.loadMenu();
+        this.init();
+    }
+
+    init() {
+        this.renderWeek();
+        this.bindEvents();
+    }
+
+    loadMenu() {
+        const saved = localStorage.getItem('weeklyMenu');
+        return saved ? JSON.parse(saved) : {};
+    }
+
+    saveMenu() {
+        localStorage.setItem('weeklyMenu', JSON.stringify(this.menu));
+    }
+
+    renderWeek() {
+        const weekGrid = document.getElementById('weekGrid');
+        const today = new Date();
+
+        weekGrid.innerHTML = Array.from({ length: 7 }, (_, offset) => {
+            const targetDate = new Date(today);
+            targetDate.setDate(today.getDate() + offset);
+
+            const dayIndex = targetDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+            const dayNameIndex = dayIndex === 0 ? 6 : dayIndex - 1; // Convert to 0-6 (Monday-Sunday)
+            const dayName = this.days[dayNameIndex];
+            const dayKey = `day_${offset}`; // Use offset as key (0-6 for next 7 days)
+            const isToday = offset === 0;
+            const dateStr = targetDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+
+            return `
+                <div class="day-card ${isToday ? 'today' : ''}" data-day="${offset}">
+                    <div class="day-header">
+                        <span class="day-name">${dayName}</span>
+                        <span class="day-date">${dateStr}</span>
+                    </div>
+                    <div class="day-meals">
+                        ${this.mealTypes.map(mealType => this.renderMealSlot(dayKey, mealType)).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        this.bindMealSlotEvents();
+    }
+
+    getDateForDay(dayIndex) {
+        const today = new Date();
+        const targetDate = new Date(today);
+        targetDate.setDate(today.getDate() + dayIndex);
+        return targetDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    }
+
+    renderMealSlot(dayKey, mealType) {
+        const slotKey = `${dayKey}_${mealType}`;
+        const meal = this.menu[slotKey];
+
+        if (meal) {
+            return `
+                <div class="meal-slot filled" data-slot="${slotKey}">
+                    <span class="meal-name">${this.escapeHtml(meal.name)}</span>
+                    <button class="meal-remove" data-slot="${slotKey}" title="Удалить">✕</button>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="meal-slot" data-slot="${slotKey}">
+                <span class="meal-label">${this.mealLabels[mealType]}</span>
+            </div>
+        `;
+    }
+
+    bindMealSlotEvents() {
+        document.querySelectorAll('.meal-slot').forEach(slot => {
+            slot.addEventListener('click', (e) => {
+                if (e.target.classList.contains('meal-remove')) {
+                    e.stopPropagation();
+                    this.removeMeal(e.target.dataset.slot);
+                } else {
+                    this.openRecipeSelector(slot.dataset.slot);
+                }
+            });
+        });
+    }
+
+    openRecipeSelector(slotKey) {
+        this.currentSlot = slotKey;
+        const parts = slotKey.split('_');
+        const dayOffset = parseInt(parts[1]);
+        const mealType = parts[2];
+
+        // Get the actual day name based on offset
+        const today = new Date();
+        const targetDate = new Date(today);
+        targetDate.setDate(today.getDate() + dayOffset);
+        const dayIndex = targetDate.getDay();
+        const dayNameIndex = dayIndex === 0 ? 6 : dayIndex - 1;
+        const dayName = this.days[dayNameIndex];
+        const mealLabel = this.mealLabels[mealType];
+
+        // Create a simple modal for recipe selection
+        const modalHtml = `
+            <div class="modal" id="recipeSelectorModal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title">Выберите рецепт</h2>
+                        <button class="close-btn" id="closeRecipeSelector">&times;</button>
+                    </div>
+                    <p style="margin-bottom: 20px; color: var(--text-secondary);">${dayName} - ${mealLabel}</p>
+                    <div class="recipe-selector-list">
+                        ${this.recipeBook.recipes.map(recipe => `
+                            <div class="recipe-selector-item" data-recipe-id="${recipe.id}">
+                                <span class="recipe-selector-emoji">${this.recipeBook.getMealTypeEmoji(recipe.mealType)}</span>
+                                <div class="recipe-selector-info">
+                                    <div class="recipe-selector-name">${this.escapeHtml(recipe.name)}</div>
+                                    <div class="recipe-selector-type">${this.recipeBook.getMealTypeLabel(recipe.mealType)}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                        ${this.recipeBook.recipes.length === 0 ? '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">Нет доступных рецептов</p>' : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        document.body.style.overflow = 'hidden';
+
+        // Show modal with a small delay to ensure it's rendered
+        setTimeout(() => {
+            const modal = document.getElementById('recipeSelectorModal');
+            if (modal) {
+                modal.classList.add('active');
+            }
+        }, 10);
+
+        // Bind close button
+        const closeBtn = document.getElementById('closeRecipeSelector');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                this.closeRecipeSelector();
+            });
+        }
+
+        // Bind backdrop click
+        const modal = document.getElementById('recipeSelectorModal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target.id === 'recipeSelectorModal') {
+                    this.closeRecipeSelector();
+                }
+            });
+        }
+
+        // Bind recipe item clicks
+        document.querySelectorAll('.recipe-selector-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const recipeId = item.dataset.recipeId;
+                const recipe = this.recipeBook.recipes.find(r => String(r.id) === recipeId);
+                if (recipe) {
+                    this.addMeal(this.currentSlot, recipe);
+                }
+                this.closeRecipeSelector();
+            });
+        });
+    }
+
+    closeRecipeSelector() {
+        const modal = document.getElementById('recipeSelectorModal');
+        if (modal) {
+            modal.classList.remove('active');
+            setTimeout(() => {
+                modal.remove();
+                document.body.style.overflow = '';
+            }, 300);
+        }
+    }
+
+    addMeal(slotKey, recipe) {
+        this.menu[slotKey] = {
+            id: recipe.id,
+            name: recipe.name,
+            mealType: recipe.mealType
+        };
+        this.saveMenu();
+        this.renderWeek();
+        this.recipeBook.showToast(`Рецепт добавлен в меню! 📅`);
+    }
+
+    removeMeal(slotKey) {
+        delete this.menu[slotKey];
+        this.saveMenu();
+        this.renderWeek();
+        this.recipeBook.showToast('Рецепт удален из меню 🗑️');
+    }
+
+    bindEvents() {
+        document.getElementById('generateShoppingListBtn').addEventListener('click', () => {
+            this.generateShoppingList();
+        });
+    }
+
+    generateShoppingList() {
+        const shoppingList = new ShoppingList(this.recipeBook);
+        shoppingList.generateFromMenu(this.menu);
+        this.recipeBook.setFilter('shopping');
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+}
+
+// Shopping List Class
+class ShoppingList {
+    constructor(recipeBook) {
+        this.recipeBook = recipeBook;
+        this.items = this.loadItems();
+        this.init();
+    }
+
+    init() {
+        this.renderItems();
+        this.bindEvents();
+    }
+
+    loadItems() {
+        const saved = localStorage.getItem('shoppingList');
+        return saved ? JSON.parse(saved) : [];
+    }
+
+    saveItems() {
+        localStorage.setItem('shoppingList', JSON.stringify(this.items));
+    }
+
+    renderItems() {
+        const container = document.getElementById('shoppingItems');
+        const emptyState = document.getElementById('shoppingEmpty');
+
+        if (this.items.length === 0) {
+            container.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        container.innerHTML = this.items.map(item => this.createItemHtml(item)).join('');
+
+        this.bindItemEvents();
+    }
+
+    createItemHtml(item) {
+        const categoryLabels = {
+            vegetables: '🥕 Овощи',
+            fruits: '🍎 Фрукты',
+            meat: '🥩 Мясо',
+            fish: '🐟 Рыба',
+            dairy: '🧀 Молочные',
+            bakery: '🍞 Выпечка',
+            drinks: '🥤 Напитки',
+            snacks: '🍿 Закуски',
+            other: '📦 Другое'
+        };
+
+        const categoryHtml = item.category 
+            ? `<span class="shopping-item-category">${categoryLabels[item.category] || item.category}</span>`
+            : '';
+
+        return `
+            <div class="shopping-item ${item.completed ? 'completed' : ''}" data-id="${item.id}">
+                <div class="shopping-item-checkbox ${item.completed ? 'checked' : ''}"></div>
+                <div class="shopping-item-content">
+                    <span class="shopping-item-name">${this.escapeHtml(item.name)}</span>
+                    ${item.quantity ? `<span class="shopping-item-quantity">${this.escapeHtml(item.quantity)}</span>` : ''}
+                    ${categoryHtml}
+                </div>
+                <button class="shopping-item-delete" data-id="${item.id}" title="Удалить">🗑️</button>
+            </div>
+        `;
+    }
+
+    bindItemEvents() {
+        document.querySelectorAll('.shopping-item-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('click', (e) => {
+                const itemElement = e.target.closest('.shopping-item');
+                const itemId = itemElement.dataset.id;
+                this.toggleComplete(itemId);
+            });
+        });
+
+        document.querySelectorAll('.shopping-item-delete').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const itemId = e.target.dataset.id;
+                this.deleteItem(itemId);
+            });
+        });
+    }
+
+    bindEvents() {
+        document.getElementById('addShoppingItemBtn').addEventListener('click', () => {
+            this.openAddModal();
+        });
+
+        document.getElementById('clearCompletedBtn').addEventListener('click', () => {
+            this.clearCompleted();
+        });
+
+        document.getElementById('clearAllBtn').addEventListener('click', () => {
+            if (confirm('Вы уверены, что хотите очистить весь список покупок?')) {
+                this.clearAll();
+            }
+        });
+
+        document.getElementById('closeShoppingModal').addEventListener('click', () => {
+            this.closeModal();
+        });
+
+        document.getElementById('shoppingModal').addEventListener('click', (e) => {
+            if (e.target.id === 'shoppingModal') {
+                this.closeModal();
+            }
+        });
+
+        document.getElementById('shoppingForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.addItem();
+        });
+    }
+
+    openAddModal() {
+        document.getElementById('shoppingModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+        document.getElementById('shoppingItemName').focus();
+    }
+
+    closeModal() {
+        document.getElementById('shoppingModal').classList.remove('active');
+        document.body.style.overflow = '';
+        document.getElementById('shoppingForm').reset();
+    }
+
+    addItem() {
+        const name = document.getElementById('shoppingItemName').value.trim();
+        const quantity = document.getElementById('shoppingItemQuantity').value.trim();
+        const category = document.getElementById('shoppingItemCategory').value;
+
+        if (!name) return;
+
+        const item = {
+            id: Date.now(),
+            name,
+            quantity,
+            category,
+            completed: false,
+            createdAt: new Date().toISOString()
+        };
+
+        this.items.unshift(item);
+        this.saveItems();
+        this.renderItems();
+        this.closeModal();
+        this.recipeBook.showToast('Товар добавлен в список! 🛒');
+    }
+
+    toggleComplete(id) {
+        const item = this.items.find(i => String(i.id) === String(id));
+        if (item) {
+            item.completed = !item.completed;
+            this.saveItems();
+            this.renderItems();
+        }
+    }
+
+    deleteItem(id) {
+        this.items = this.items.filter(i => String(i.id) !== String(id));
+        this.saveItems();
+        this.renderItems();
+        this.recipeBook.showToast('Товар удален из списка 🗑️');
+    }
+
+    clearCompleted() {
+        const completedCount = this.items.filter(i => i.completed).length;
+        if (completedCount === 0) {
+            this.recipeBook.showToast('Нет выполненных товаров для удаления');
+            return;
+        }
+        this.items = this.items.filter(i => !i.completed);
+        this.saveItems();
+        this.renderItems();
+        this.recipeBook.showToast(`Удалено ${completedCount} выполненных товаров ✅`);
+    }
+
+    clearAll() {
+        this.items = [];
+        this.saveItems();
+        this.renderItems();
+        this.recipeBook.showToast('Список покупок очищен 🗑️');
+    }
+
+    generateFromMenu(menu) {
+        // Generate shopping list from menu recipes
+        // This is a placeholder - in a real app, you'd parse recipe ingredients
+        const recipeNames = Object.values(menu).map(m => m.name);
+        
+        if (recipeNames.length === 0) {
+            this.recipeBook.showToast('Меню пустое. Добавьте рецепты в меню сначала.');
+            return;
+        }
+
+        // Add a placeholder item for each recipe
+        recipeNames.forEach(name => {
+            const existingItem = this.items.find(i => i.name === `Ингредиенты для: ${name}`);
+            if (!existingItem) {
+                this.items.unshift({
+                    id: Date.now() + Math.random(),
+                    name: `Ингредиенты для: ${name}`,
+                    quantity: '',
+                    category: 'other',
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                });
+            }
+        });
+
+        this.saveItems();
+        this.renderItems();
+        this.recipeBook.showToast(`Список покупок сформирован из ${recipeNames.length} рецептов! 🛒`);
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+}
+
 function createRipple(event) {
     const button = event.currentTarget;
     const circle = document.createElement('span');
