@@ -52,9 +52,7 @@
         <!-- Header -->
         <header class="header">
             <h1 class="title">
-                <span class="title-icon">🍳</span>
                 <span class="title-text">Книга Рецептов</span>
-                <span class="title-icon">🍰</span>
             </h1>
             <p class="subtitle">Сохраняй любимые рецепты в одном месте</p>
         </header>
@@ -189,6 +187,35 @@
             <div class="delete-modal-actions">
                 <button class="delete-modal-btn cancel" id="cancelDelete">Отмена</button>
                 <button class="delete-modal-btn confirm" id="confirmDelete">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recipe Detail Modal -->
+    <div class="modal" id="recipeDetailModal">
+        <div class="modal-content recipe-detail-content">
+            <div class="recipe-detail-header">
+                <h2 class="recipe-detail-title" id="detailTitle">Название рецепта</h2>
+                <button class="close-btn" id="closeDetailModal">&times;</button>
+            </div>
+            <div class="recipe-detail-body">
+                <div class="recipe-detail-image" id="detailImage">
+                    <span class="recipe-emoji">🍽️</span>
+                </div>
+                <div class="recipe-detail-info">
+                    <div class="recipe-detail-type" id="detailType">🍽️ Тип блюда</div>
+                    <div class="recipe-detail-time" id="detailTime">⏱️ Время приготовления</div>
+                </div>
+                <div class="recipe-detail-description">
+                    <h3>Описание</h3>
+                    <p id="detailDescription">Описание рецепта...</p>
+                </div>
+                <div class="recipe-detail-actions">
+                    <a href="#" target="_blank" class="recipe-btn primary" id="detailUrl">
+                        <span>🍽️</span>
+                        <span>Открыть рецепт</span>
+                    </a>
+                </div>
             </div>
         </div>
     </div>

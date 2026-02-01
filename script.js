@@ -159,6 +159,18 @@ class RecipeBook {
             }
         });
 
+        // Close detail modal
+        document.getElementById('closeDetailModal').addEventListener('click', () => {
+            this.closeDetailModal();
+        });
+
+        // Close detail modal on backdrop click
+        document.getElementById('recipeDetailModal').addEventListener('click', (e) => {
+            if (e.target.id === 'recipeDetailModal') {
+                this.closeDetailModal();
+            }
+        });
+
         // Mobile navigation
         document.querySelectorAll('.mobile-nav-item').forEach(item => {
             item.addEventListener('click', () => {
@@ -173,6 +185,7 @@ class RecipeBook {
         document.querySelector('.modal-title').textContent = 'Добавить рецепт';
         document.querySelector('.submit-btn .btn-text').textContent = 'Сохранить рецепт';
         document.getElementById('modal').classList.add('active');
+        document.body.style.overflow = 'hidden';
         document.getElementById('recipeName').focus();
     }
 
@@ -200,6 +213,7 @@ class RecipeBook {
     // Close modal
     closeModal() {
         document.getElementById('modal').classList.remove('active');
+        document.body.style.overflow = '';
         document.getElementById('recipeForm').reset();
         this.editingId = null;
     }
@@ -261,6 +275,7 @@ class RecipeBook {
         this.recipeToDelete = id;
         const deleteModal = document.getElementById('deleteModal');
         deleteModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
     }
 
     // Confirm delete
@@ -284,7 +299,39 @@ class RecipeBook {
     closeDeleteModal() {
         const deleteModal = document.getElementById('deleteModal');
         deleteModal.classList.remove('active');
+        document.body.style.overflow = '';
         this.recipeToDelete = null;
+    }
+
+    // Open recipe detail modal
+    openDetailModal(id) {
+        const recipe = this.recipes.find(r => String(r.id) === String(id));
+        if (!recipe) return;
+
+        // Fill modal with recipe data
+        document.getElementById('detailTitle').textContent = recipe.name;
+        document.getElementById('detailType').textContent = this.getMealTypeLabel(recipe.mealType);
+        document.getElementById('detailTime').textContent = recipe.cookingTime ? `⏱️ ${recipe.cookingTime}` : '';
+        document.getElementById('detailDescription').textContent = recipe.description || 'Описание отсутствует';
+        document.getElementById('detailUrl').href = recipe.url;
+
+        // Handle image
+        const detailImage = document.getElementById('detailImage');
+        if (recipe.imageUrl) {
+            detailImage.innerHTML = `<img src="${this.escapeHtml(recipe.imageUrl)}" alt="${this.escapeHtml(recipe.name)}" onerror="this.parentElement.innerHTML='<span class=\\'recipe-emoji\\'>${this.getMealTypeEmoji(recipe.mealType)}</span>'">`;
+        } else {
+            detailImage.innerHTML = `<span class="recipe-emoji">${this.getMealTypeEmoji(recipe.mealType)}</span>`;
+        }
+
+        // Show modal
+        document.getElementById('recipeDetailModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    // Close recipe detail modal
+    closeDetailModal() {
+        document.getElementById('recipeDetailModal').classList.remove('active');
+        document.body.style.overflow = '';
     }
 
     // Toggle favorite
@@ -337,11 +384,10 @@ class RecipeBook {
     getFilteredRecipes() {
         let filtered = [...this.recipes];
 
-        // Apply search filter
+        // Apply search filter (only by name, matching word beginnings)
         if (this.searchQuery) {
-            filtered = filtered.filter(recipe => 
-                recipe.name.toLowerCase().includes(this.searchQuery) ||
-                recipe.description.toLowerCase().includes(this.searchQuery)
+            filtered = filtered.filter(recipe =>
+                recipe.name.toLowerCase().split(' ').some(word => word.startsWith(this.searchQuery))
             );
         }
 
@@ -452,23 +498,41 @@ class RecipeBook {
     // Bind card events
     bindCardEvents() {
         document.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const id = btn.dataset.id;
                 this.openEditModal(id);
             });
         });
 
         document.querySelectorAll('.favorite-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const id = btn.dataset.id;
                 this.toggleFavorite(id);
             });
         });
 
         document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const id = btn.dataset.id;
                 this.deleteRecipe(id);
+            });
+        });
+
+        // Prevent detail modal from opening when clicking "Open" button
+        document.querySelectorAll('.recipe-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        });
+
+        // Card click to open detail modal
+        document.querySelectorAll('.recipe-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const id = card.dataset.id;
+                this.openDetailModal(id);
             });
         });
     }
@@ -685,6 +749,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     initThemeToggle();
     new ParticlesAnimation();
-    new ParallaxEffect();
+    // ParallaxEffect disabled - removed parallax effect
+    // new ParallaxEffect();
     new RecipeBook();
 });
