@@ -24,6 +24,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 </head>
 <body>
     <canvas id="particlesCanvas" class="particles-canvas"></canvas>
@@ -46,6 +47,12 @@
     <!-- Theme Toggle -->
     <button class="theme-toggle" id="themeToggle" title="Переключить тему">
         <span class="theme-icon">🌙</span>
+    </button>
+
+    <!-- Auth Button -->
+    <button class="auth-toggle" id="authToggle" title="Войти в аккаунт">
+        <span class="auth-icon">👤</span>
+        <span class="auth-text" id="authText">Войти</span>
     </button>
 
     <div class="container">
@@ -393,6 +400,39 @@
                     <span class="btn-text">Добавить в список</span>
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div class="modal" id="authModal">
+        <div class="modal-content auth-modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="authTitle">Вход в аккаунт</h2>
+                <button class="close-btn" id="closeAuthModal">&times;</button>
+            </div>
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Вход</button>
+                <button class="auth-tab" data-tab="register">Регистрация</button>
+            </div>
+            <form class="auth-form" id="authForm">
+                <div class="form-group" id="nameGroup" style="display: none;">
+                    <label class="form-label">Имя</label>
+                    <input type="text" class="form-input" id="authName" placeholder="Ваше имя">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email *</label>
+                    <input type="email" class="form-input" id="authEmail" required placeholder="example@mail.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Пароль *</label>
+                    <input type="password" class="form-input" id="authPassword" required placeholder="Минимум 6 символов">
+                </div>
+                <button type="submit" class="submit-btn" id="authSubmitBtn">
+                    <span class="btn-icon">🔐</span>
+                    <span class="btn-text" id="authSubmitText">Войти</span>
+                </button>
+            </form>
+            <div class="auth-error" id="authError" style="display: none;"></div>
         </div>
     </div>
 

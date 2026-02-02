@@ -848,6 +848,7 @@ class RecipeBook {
         this.bindEvents();
         await this.loadRecipes();
         this.renderRecipes();
+        this.setupRealtimeSync();
         // Hide loading screen immediately
         const loadingScreen = document.getElementById('loadingScreen');
         if (loadingScreen) {
@@ -871,6 +872,46 @@ class RecipeBook {
             }
         } else {
             this.loadFromLocalStorage();
+        }
+    }
+
+    // Setup real-time sync with Firebase
+    setupRealtimeSync() {
+        if (useFirebase && db) {
+            // Listen for real-time changes
+            db.collection('recipes')
+                .onSnapshot((snapshot) => {
+                    const changes = snapshot.docChanges();
+                    
+                    if (changes.length > 0) {
+                        console.log('Recipe changes detected:', changes.length);
+                        
+                        // Rebuild recipes list from snapshot
+                        this.recipes = snapshot.docs.map(doc => ({
+                            id: doc.id,
+                            ...doc.data()
+                        }));
+                        
+                        // Save to localStorage
+                        this.saveToLocalStorage();
+                        
+                        // Re-render recipes
+                        this.renderRecipes();
+                        
+                        // Show notification for external changes
+                        const externalChanges = changes.filter(change => 
+                            change.doc.metadata.hasPendingWrites === false
+                        );
+                        
+                        if (externalChanges.length > 0) {
+                            console.log('External recipe changes detected, updating UI');
+                        }
+                    }
+                }, (error) => {
+                    console.error('Error listening to recipe changes:', error);
+                });
+
+            console.log('Real-time sync enabled for recipes');
         }
     }
 
@@ -1990,22 +2031,113 @@ class MenuPlanner {
             lunch: '☀️ Обед',
             dinner: '🌙 Ужин'
         };
-        this.menu = this.loadMenu();
+        this.menu = {};
+        this.unsubscribe = null; // Для отписки от слушателя Firebase
         this.init();
     }
 
-    init() {
+    async init() {
+        await this.loadMenu();
         this.renderWeek();
         this.bindEvents();
+        this.setupRealtimeSync();
     }
 
-    loadMenu() {
+    // Load menu from Firebase or localStorage
+    async loadMenu() {
+        if (useFirebase && db) {
+            try {
+                const doc = await db.collection('settings').doc('weeklyMenu').get();
+                if (doc.exists) {
+                    this.menu = doc.data().menu || {};
+                    console.log('Menu loaded from Firebase:', Object.keys(this.menu).length, 'meals');
+                } else {
+                    this.loadFromLocalStorage();
+                }
+            } catch (error) {
+                console.error('Error loading menu from Firebase:', error);
+                this.loadFromLocalStorage();
+            }
+        } else {
+            this.loadFromLocalStorage();
+        }
+    }
+
+    // Load from localStorage as fallback
+    loadFromLocalStorage() {
         const saved = localStorage.getItem('weeklyMenu');
-        return saved ? JSON.parse(saved) : {};
+        this.menu = saved ? JSON.parse(saved) : {};
+        console.log('Menu loaded from localStorage:', Object.keys(this.menu).length, 'meals');
     }
 
-    saveMenu() {
+    // Save menu to Firebase and localStorage
+    async saveMenu() {
+        // Always save to localStorage first (fast)
+        this.saveToLocalStorage();
+
+        // Then save to Firebase in background (async)
+        if (useFirebase && db) {
+            try {
+                await db.collection('settings').doc('weeklyMenu').set({
+                    menu: this.menu,
+                    updatedAt: new Date().toISOString()
+                });
+                console.log('Menu saved to Firebase');
+            } catch (error) {
+                console.error('Error saving menu to Firebase:', error);
+            }
+        }
+    }
+
+    // Save to localStorage as fallback
+    saveToLocalStorage() {
         localStorage.setItem('weeklyMenu', JSON.stringify(this.menu));
+        console.log('Menu saved to localStorage');
+    }
+
+    // Setup real-time sync with Firebase
+    setupRealtimeSync() {
+        if (useFirebase && db) {
+            // Unsubscribe from previous listener if exists
+            if (this.unsubscribe) {
+                this.unsubscribe();
+            }
+
+            // Listen for real-time changes
+            this.unsubscribe = db.collection('settings').doc('weeklyMenu')
+                .onSnapshot((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        const newMenu = data.menu || {};
+                        
+                        // Check if this is an external change (not from this client)
+                        if (!doc.metadata.hasPendingWrites) {
+                            console.log('External menu changes detected, updating UI');
+                            
+                            // Update menu
+                            this.menu = newMenu;
+                            
+                            // Save to localStorage
+                            this.saveToLocalStorage();
+                            
+                            // Re-render week
+                            this.renderWeek();
+                        }
+                    }
+                }, (error) => {
+                    console.error('Error listening to menu changes:', error);
+                });
+
+            console.log('Real-time sync enabled for menu');
+        }
+    }
+
+    // Cleanup when destroying instance
+    destroy() {
+        if (this.unsubscribe) {
+            this.unsubscribe();
+            this.unsubscribe = null;
+        }
     }
 
     renderWeek() {
@@ -2213,22 +2345,124 @@ class MenuPlanner {
 class ShoppingList {
     constructor(recipeBook) {
         this.recipeBook = recipeBook;
-        this.items = this.loadItems();
+        this.items = [];
+        this.unsubscribe = null; // Для отписки от слушателя Firebase
         this.init();
     }
 
-    init() {
+    async init() {
+        await this.loadItems();
         this.renderItems();
         this.bindEvents();
+        this.setupRealtimeSync();
     }
 
-    loadItems() {
+    // Load items from Firebase or localStorage
+    async loadItems() {
+        if (useFirebase && db) {
+            try {
+                const snapshot = await db.collection('shoppingList').get();
+                this.items = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                console.log('Shopping list loaded from Firebase:', this.items.length);
+            } catch (error) {
+                console.error('Error loading shopping list from Firebase:', error);
+                this.loadFromLocalStorage();
+            }
+        } else {
+            this.loadFromLocalStorage();
+        }
+    }
+
+    // Load from localStorage as fallback
+    loadFromLocalStorage() {
         const saved = localStorage.getItem('shoppingList');
-        return saved ? JSON.parse(saved) : [];
+        this.items = saved ? JSON.parse(saved) : [];
+        console.log('Shopping list loaded from localStorage:', this.items.length);
     }
 
-    saveItems() {
+    // Save items to Firebase and localStorage
+    async saveItems() {
+        // Always save to localStorage first (fast)
+        this.saveToLocalStorage();
+
+        // Then save to Firebase in background (async)
+        if (useFirebase && db) {
+            try {
+                // Save each item to Firebase
+                for (const item of this.items) {
+                    const { id, ...itemData } = item;
+                    await db.collection('shoppingList').doc(String(id)).set(itemData);
+                }
+                console.log('Shopping list saved to Firebase');
+            } catch (error) {
+                console.error('Error saving shopping list to Firebase:', error);
+            }
+        }
+    }
+
+    // Save to localStorage as fallback
+    saveToLocalStorage() {
         localStorage.setItem('shoppingList', JSON.stringify(this.items));
+        console.log('Shopping list saved to localStorage');
+    }
+
+    // Setup real-time sync with Firebase
+    setupRealtimeSync() {
+        if (useFirebase && db) {
+            // Unsubscribe from previous listener if exists
+            if (this.unsubscribe) {
+                this.unsubscribe();
+            }
+
+            // Listen for real-time changes
+            this.unsubscribe = db.collection('shoppingList')
+                .onSnapshot((snapshot) => {
+                    const changes = snapshot.docChanges();
+                    
+                    if (changes.length > 0) {
+                        console.log('Shopping list changes detected:', changes.length);
+                        
+                        // Rebuild items list from snapshot
+                        this.items = snapshot.docs.map(doc => ({
+                            id: doc.id,
+                            ...doc.data()
+                        }));
+                        
+                        // Save to localStorage
+                        this.saveToLocalStorage();
+                        
+                        // Re-render items
+                        this.renderItems();
+                        
+                        // Show notification for external changes
+                        if (changes.some(change => change.type !== 'added' || change.doc.metadata.hasPendingWrites === false)) {
+                            // Check if this is an external change (not from this client)
+                            const externalChanges = changes.filter(change => 
+                                change.doc.metadata.hasPendingWrites === false
+                            );
+                            
+                            if (externalChanges.length > 0) {
+                                console.log('External changes detected, updating UI');
+                            }
+                        }
+                    }
+                }, (error) => {
+                    console.error('Error listening to shopping list changes:', error);
+                });
+
+            console.log('Real-time sync enabled for shopping list');
+        }
+    }
+
+    // Cleanup when destroying the instance
+    destroy() {
+        if (this.unsubscribe) {
+            this.unsubscribe();
+            this.unsubscribe = null;
+        }
     }
 
     renderItems() {
