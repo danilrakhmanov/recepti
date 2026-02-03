@@ -4353,7 +4353,7 @@ body::before {
     opacity: 0.9;
 }
 
-/* Disable ripple effect for auth tabs */
-.auth-subtab .ripple {
+/* Disable ripple effect for auth toggle */
+.auth-toggle .ripple {
     display: none !important;
 }
