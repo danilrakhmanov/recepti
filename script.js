@@ -1084,16 +1084,23 @@ class RecipeBook {
 
     // Bind all event listeners
     bindEvents() {
-        // Add recipe button
-        document.getElementById('addRecipeBtn').addEventListener('click', () => {
+        // My recipes button
+        document.getElementById('myRecipesBtn').addEventListener('click', () => {
+            this.setFilter('all');
+        });
+
+        // Add recipe quick button
+        document.getElementById('addRecipeQuickBtn').addEventListener('click', () => {
             this.openModal();
         });
 
         // Quick action buttons
         document.querySelectorAll('.quick-action-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this.setFilter(btn.dataset.filter);
-            });
+            if (btn.id !== 'addRecipeQuickBtn') {
+                btn.addEventListener('click', () => {
+                    this.setFilter(btn.dataset.filter);
+                });
+            }
         });
 
         // Close modal
@@ -1783,6 +1790,7 @@ class RecipeBook {
 
     // Set filter
     setFilter(filter) {
+        const previousFilter = this.currentFilter;
         this.currentFilter = filter;
 
         // Update active tab
@@ -1800,12 +1808,21 @@ class RecipeBook {
         const menuPlanner = document.getElementById('menuPlanner');
         const shoppingList = document.getElementById('shoppingList');
         const emptyState = document.getElementById('emptyState');
+        const filterTabs = document.querySelector('.filter-tabs');
+        const mobileNav = document.getElementById('mobileNav');
+
+        // Check if we're switching between recipe filters or from/to planner/shopping
+        const isRecipeFilter = ['all', 'first', 'second', 'salads', 'snacks', 'baking', 'dessert', 'favorites'].includes(filter);
+        const wasRecipeFilter = ['all', 'first', 'second', 'salads', 'snacks', 'baking', 'dessert', 'favorites'].includes(previousFilter);
 
         if (filter === 'planner') {
             recipeGrid.style.display = 'none';
             emptyState.style.display = 'none';
             menuPlanner.style.display = 'block';
             shoppingList.style.display = 'none';
+            // Hide navigation
+            filterTabs.classList.add('hidden');
+            mobileNav.classList.add('hidden');
             if (!this.menuPlanner) {
                 this.menuPlanner = new MenuPlanner(this);
             }
@@ -1814,6 +1831,9 @@ class RecipeBook {
             emptyState.style.display = 'none';
             menuPlanner.style.display = 'none';
             shoppingList.style.display = 'block';
+            // Hide navigation
+            filterTabs.classList.add('hidden');
+            mobileNav.classList.add('hidden');
             if (!this.shoppingList) {
                 this.shoppingList = new ShoppingList(this);
             } else {
@@ -1823,6 +1843,11 @@ class RecipeBook {
             recipeGrid.style.display = 'grid';
             menuPlanner.style.display = 'none';
             shoppingList.style.display = 'none';
+            // Show navigation only if we were in planner or shopping
+            if (!wasRecipeFilter) {
+                filterTabs.classList.remove('hidden');
+                mobileNav.classList.remove('hidden');
+            }
             this.renderRecipes();
         }
     }
