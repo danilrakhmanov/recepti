@@ -146,6 +146,7 @@ class AuthManager {
             'auth/weak-password': 'Пароль должен содержать минимум 6 символов',
             'auth/user-not-found': 'Пользователь не найден',
             'auth/wrong-password': 'Неверный пароль',
+            'auth/invalid-login-credentials': 'Неверный email или пароль',
             'auth/too-many-requests': 'Слишком много попыток. Попробуйте позже',
             'auth/network-request-failed': 'Ошибка сети. Проверьте подключение к интернету',
             'auth/popup-closed-by-user': 'Окно входа было закрыто',
@@ -2978,6 +2979,18 @@ function bindAuthEvents() {
             googleAuthBtn.querySelector('.google-text').textContent = 'Войти через Google';
         }
     });
+    
+    // Password visibility toggle
+    const passwordToggle = document.getElementById('passwordToggle');
+    const authPassword = document.getElementById('authPassword');
+    
+    if (passwordToggle && authPassword) {
+        passwordToggle.addEventListener('click', () => {
+            const type = authPassword.type === 'password' ? 'text' : 'password';
+            authPassword.type = type;
+            passwordToggle.textContent = type === 'password' ? '👁️' : '🙈';
+        });
+    }
     
     // Email form submission
     authForm.addEventListener('submit', async (e) => {
