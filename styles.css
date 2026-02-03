@@ -630,15 +630,11 @@ body::before {
     padding: 10px 18px;
     background: linear-gradient(135deg, #ef4444, #dc2626);
     color: white;
-    text-decoration: none;
     border-radius: 25px;
     font-family: 'Comfortaa', cursive;
     font-size: 0.85rem;
     font-weight: 700;
-    box-shadow:
-        0 4px 15px rgba(239, 68, 68, 0.4),
-        0 0 0 0 rgba(239, 68, 68, 0.4);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
     z-index: 10;
 }
 
@@ -650,9 +646,9 @@ body::before {
     width: 100%;
     height: 100%;
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    transition: left 0.5s;
     border-radius: 25px;
     pointer-events: none;
+    display: none;
 }
 
 .recipe-video-badge:hover::before {
@@ -660,21 +656,17 @@ body::before {
 }
 
 .recipe-video-badge:hover {
-    transform: scale(1.08);
-    box-shadow:
-        0 8px 25px rgba(239, 68, 68, 0.5),
-        0 0 0 8px rgba(239, 68, 68, 0);
+    transform: none;
 }
 
 .recipe-video-badge:active {
-    transform: scale(1.02);
-    box-shadow:
-        0 4px 15px rgba(239, 68, 68, 0.4),
-        0 0 0 4px rgba(239, 68, 68, 0);
+    transform: none;
 }
 
-.recipe-video-badge span:first-child {
-    font-size: 1.1rem;
+.recipe-video-badge .youtube-icon {
+    width: 1.2rem;
+    height: 1.2rem;
+    fill: white;
     animation: videoIconPulse 2s ease-in-out infinite;
 }
 
@@ -685,6 +677,10 @@ body::before {
     50% {
         transform: scale(1.2);
     }
+}
+
+.recipe-card:hover .recipe-video-badge {
+    transform: none;
 }
 
 .recipe-card:hover .recipe-emoji {
