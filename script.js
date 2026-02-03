@@ -70,9 +70,6 @@ n                }
             const userId = this.currentUser.uid;
             console.log('Syncing data for user:', userId);
             
-            // Get references to user subcollections
-            const userDocRef = db.collection('users').doc(userId);
-            
             // Upload local data to Firebase
             await this.uploadLocalDataToFirebase(userId);
             
@@ -90,22 +87,46 @@ n                }
         if (!db) return;
         
         try {
-            const collections = ['recipes', 'shoppingList', 'weeklyMenu'];
-            
-            for (const coll of collections) {
-                const localData = localStorage.getItem(coll);
-                if (localData) {
-                    const data = JSON.parse(localData);
-                    if (data && data.length > 0) {
-                        // Upload to user's subcollection
-                        await db.collection('users').doc(userId).collection('data').doc(coll).set({
-                            items: data,
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                        console.log(`Uploaded ${coll} to Firebase:`, data.length, 'items');
-                    }
+            // Upload recipes
+            const recipesData = localStorage.getItem('recipes');
+            if (recipesData) {
+                const recipes = JSON.parse(recipesData);
+                if (recipes && recipes.length > 0) {
+                    await db.collection('users').doc(userId).collection('data').doc('recipes').set({
+                        items: recipes,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log('Uploaded recipes to Firebase:', recipes.length);
                 }
             }
+            
+            // Upload shopping list
+            const shoppingData = localStorage.getItem('shoppingList');
+            if (shoppingData) {
+                const items = JSON.parse(shoppingData);
+                if (items && items.length > 0) {
+                    await db.collection('users').doc(userId).collection('data').doc('shoppingList').set({
+                        items: items,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log('Uploaded shopping list to Firebase:', items.length);
+                }
+            }
+            
+            // Upload menu
+            const menuData = localStorage.getItem('weeklyMenu');
+            if (menuData) {
+                const menu = JSON.parse(menuData);
+                if (menu && Object.keys(menu).length > 0) {
+                    await db.collection('users').doc(userId).collection('data').doc('weeklyMenu').set({
+                        items: menu,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log('Uploaded weekly menu to Firebase:', Object.keys(menu).length);
+                }
+            }
+            
+            console.log('All local data uploaded to Firebase for user:', userId);
         } catch (error) {
             console.error('Error uploading local data:', error);
         }
@@ -116,29 +137,37 @@ n                }
         if (!db || !window.recipeBook) return;
         
         try {
-            const snapshot = await db.collection('users').doc(userId).collection('data').get();
+            // Load recipes for this user
+            const recipesDoc = await db.collection('users').doc(userId).collection('data').doc('recipes').get();
+            if (recipesDoc.exists) {
+                const data = recipesDoc.data();
+                window.recipeBook.recipes = data.items || [];
+                window.recipeBook.saveToLocalStorage();
+                window.recipeBook.renderRecipes();
+                console.log('Loaded recipes from Firebase:', window.recipeBook.recipes.length);
+            }
             
-            snapshot.forEach(doc => {
-                const coll = doc.id;
-                const data = doc.data();
-                if (data && data.items) {
-                    // Update recipeBook with Firebase data
-                    if (coll === 'recipes') {
-                        window.recipeBook.recipes = data.items;
-                        window.recipeBook.saveToLocalStorage();
-                        window.recipeBook.renderRecipes();
-                        console.log('Loaded recipes from Firebase:', data.items.length);
-                    } else if (coll === 'shoppingList') {
-                        window.recipeBook.items = data.items;
-                        window.recipeBook.saveToLocalStorage();
-                        console.log('Loaded shopping list from Firebase:', data.items.length);
-                    } else if (coll === 'weeklyMenu') {
-                        window.recipeBook.menu = data.items;
-                        window.recipeBook.saveToLocalStorage();
-                        console.log('Loaded menu from Firebase');
-                    }
-                }
-            });
+            // Load shopping list
+            const shoppingDoc = await db.collection('users').doc(userId).collection('data').doc('shoppingList').get();
+            if (shoppingDoc.exists) {
+                const data = shoppingDoc.data();
+                window.recipeBook.items = data.items || [];
+                window.recipeBook.saveToLocalStorage();
+                window.recipeBook.renderItems();
+                console.log('Loaded shopping list from Firebase:', window.recipeBook.items.length);
+            }
+            
+            // Load menu
+            const menuDoc = await db.collection('users').doc(userId).collection('data').doc('weeklyMenu').get();
+            if (menuDoc.exists) {
+                const data = menuDoc.data();
+                window.recipeBook.menu = data.items || {};
+                window.recipeBook.saveToLocalStorage();
+                window.recipeBook.renderWeek();
+                console.log('Loaded weekly menu from Firebase:', Object.keys(window.recipeBook.menu).length);
+            }
+            
+            console.log('All data loaded from Firebase for user:', userId);
         } catch (error) {
             console.error('Error loading data from Firebase:', error);
         }
@@ -239,15 +268,45 @@ n                }
             'auth/weak-password': 'Пароль должен содержать минимум 6 символов',
             'auth/user-not-found': 'Пользователь не найден',
             'auth/wrong-password': 'Неверный пароль',
-            'auth/invalid-login-credentials': 'Неверный email или пароль',
-            'auth/too-many-requests': 'Слишком много попыток. Попробуйте позже',
-            'auth/network-request-failed': 'Ошибка сети. Проверьте подключение к интернету',
+            'auth/invalid-login-credentials': '❌ Неверный email или пароль',
+            'auth/too-many-requests': '⏰ Слишком много попыток. Попробуйте позже',
+            'auth/network-request-failed': '🌐 Ошибка сети. Проверьте подключение',
             'auth/popup-closed-by-user': 'Окно входа было закрыто',
             'auth/cancelled-popup-request': 'Вход через Google был отменен',
-            'auth/unauthorized-domain': 'Домен не авторизован для Google OAuth'
+            'auth/unauthorized-domain': '🚫 Домен не авторизован для Google OAuth',
+            'auth/operation-not-allowed': 'Вход через этот способ отключен',
+            'auth/user-disabled': 'Аккаунт заблокирован',
+            'auth/expired-action-code': 'Ссылка устарела',
+            'auth/invalid-action-code': 'Недействительная ссылка'
         };
-
-        return errorMessages[error.code] || error.message || 'Произошла ошибка';
+        
+        const errorCode = error.code || '';
+        const errorMessage = error.message || '';
+        
+        // Проверяем точное совпадение кода ошибки
+        if (errorMessages[errorCode]) {
+            return errorMessages[errorCode];
+        }
+        
+        // Проверяем, содержит ли сообщение известные ключевые слова (для старых версий SDK)
+        if (errorMessage.includes('invalid-login-credentials') || 
+            errorMessage.includes('wrong password') || 
+            errorMessage.includes('user not found')) {
+            return '❌ Неверный email или пароль';
+        }
+        
+        // Проверяем на слишком много запросов
+        if (errorMessage.includes('too-many-requests') || 
+            errorMessage.includes('TOO_MANY_ATTEMPTS')) {
+            return '⏰ Слишком много попыток. Попробуйте позже';
+        }
+        
+        // Если известное сообщение в error.message, возвращаем его
+        if (errorMessage && !errorMessage.includes('Firebase')) {
+            return '❌ ' + errorMessage;
+        }
+        
+        return '❌ Произошла ошибка при входе';
     }
 }
 
@@ -1087,18 +1146,19 @@ class RecipeBook {
     // Load recipes from Firebase or localStorage
     async loadRecipes() {
         if (useFirebase && db && window.authManager && window.authManager.currentUser) {
+            // Загружаем из структуры users/{userId}/data/recipes
+            const userId = window.authManager.currentUser.uid;
             try {
-                const userId = window.authManager.currentUser.uid;
-                const doc = await db.collection('users').doc(userId).collection('data').doc('recipes').get();
-                
-                if (doc.exists && doc.data()) {
-                    this.recipes = doc.data().items || [];
-                    console.log('Recipes loaded from Firebase for user:', this.recipes.length);
+                const snapshot = await db.collection('users').doc(userId).collection('data').doc('recipes').get();
+                if (snapshot.exists) {
+                    const data = snapshot.data();
+                    this.recipes = data.items || [];
                 } else {
                     this.loadFromLocalStorage();
                 }
+                console.log('Recipes loaded from Firebase for user:', userId);
             } catch (error) {
-                console.error('Error loading from Firebase:', error);
+                console.error('Error loading recipes from Firebase:', error);
                 this.loadFromLocalStorage();
             }
         } else {
@@ -1111,22 +1171,23 @@ class RecipeBook {
         if (useFirebase && db && window.authManager && window.authManager.currentUser) {
             const userId = window.authManager.currentUser.uid;
             
-            // Listen for real-time changes
-            db.collection('users').doc(userId).collection('data').doc('recipes')
+            // Listen for real-time changes in recipes collection
+            const unsubscribe = db.collection('users').doc(userId).collection('data')
+                .doc('recipes')
                 .onSnapshot((snapshot) => {
-                    if (snapshot.exists && snapshot.data()) {
+                    if (snapshot.exists) {
                         const data = snapshot.data();
-                        if (data.items) {
-                            this.recipes = data.items;
-                            this.saveToLocalStorage();
-                            this.renderRecipes();
-                            console.log('Real-time sync: recipes updated from Firebase');
-                        }
+                        this.recipes = data.items || [];
+                        this.saveToLocalStorage();
+                        this.renderRecipes();
+                        console.log('Real-time sync: recipes updated from Firebase');
                     }
                 }, (error) => {
                     console.error('Error listening to recipe changes:', error);
                 });
-
+            
+            // Store unsubscribe function for cleanup
+            this.recipeSyncUnsubscribe = unsubscribe;
             console.log('Real-time sync enabled for user:', userId);
         }
     }
@@ -1147,14 +1208,12 @@ class RecipeBook {
         if (useFirebase && db && window.authManager && window.authManager.currentUser) {
             try {
                 const userId = window.authManager.currentUser.uid;
-                const { id, ...recipeData } = this.recipes;
                 
-                // Save to user's subcollection
+                // Save all recipes as single document in user's data collection
                 await db.collection('users').doc(userId).collection('data').doc('recipes').set({
                     items: this.recipes,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                
                 console.log('Recipes saved to Firebase for user:', userId);
             } catch (error) {
                 console.error('Error saving recipes to Firebase:', error);
