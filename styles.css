@@ -327,6 +327,11 @@ body::before {
     }
 }
 
+/* Ripple Effect - disabled for auth */
+.auth-subtab .ripple {
+    display: none;
+}
+
 /* Ripple Effect */
 .ripple {
     position: absolute;
@@ -1187,7 +1192,7 @@ body::before {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 28px 28px 10px;
+    padding: 20px 28px 16px;
     border-bottom: 2px solid rgba(255, 107, 157, 0.1);
     position: relative;
 }
@@ -1195,14 +1200,13 @@ body::before {
 .modal-header::after {
     content: '';
     position: absolute;
-    bottom: 0;
+    bottom: -2px;
     left: 28px;
     right: 28px;
-    height: 3px;
+    height: 2px;
     background: linear-gradient(90deg, var(--primary-color), var(--secondary-color), var(--accent-color));
     opacity: 0;
     transition: opacity 0.3s ease;
-    border-radius: 3px 3px 0 0;
 }
 
 .modal.active .modal-header::after {
@@ -1243,6 +1247,32 @@ body::before {
 
 .close-btn:active {
     transform: rotate(90deg) scale(0.95);
+}
+
+/* Auth Modal - special styles */
+.auth-modal-content .modal-header {
+    padding: 20px 24px 12px;
+}
+
+.auth-modal-content .modal-title {
+    font-size: 1.4rem;
+}
+
+.auth-modal-content .close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    box-shadow: none;
+    font-size: 1.5rem;
+}
+
+.auth-modal-content .close-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+    transform: none;
+    box-shadow: none;
 }
 
 .recipe-form {
@@ -3856,12 +3886,13 @@ body::before {
 /* Auth Modal */
 .auth-modal-content {
     max-width: 400px;
+    padding: 24px;
 }
 
 .auth-tabs {
     display: flex;
     gap: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
 .auth-tab {
@@ -3890,7 +3921,7 @@ body::before {
 .auth-form {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 12px;
 }
 
 /* Input Wrapper with Icon */
@@ -4108,13 +4139,29 @@ body::before {
     font-weight: 500;
     color: #333;
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.google-auth-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s;
+}
+
+.google-auth-btn:hover::before {
+    left: 100%;
 }
 
 .google-auth-btn:hover {
     background: #f8f9fa;
     border-color: #4285F4;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.2);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
 }
 
 .google-svg {
@@ -4239,4 +4286,74 @@ body::before {
     margin: 20px 0;
     display: flex;
     justify-content: center;
+}
+
+/* Fix gradient line to be full width */
+.modal-header::after {
+    left: 0 !important;
+    right: 0 !important;
+}
+
+.auth-modal-content .modal-header::after {
+    left: 24px !important;
+    right: 24px !important;
+}
+
+/* Reduce padding in auth modal */
+.auth-modal-content {
+    padding: 16px !important;
+}
+
+.auth-modal-content .modal-header {
+    padding: 16px 24px 8px !important;
+}
+
+/* Gradient divider before auth tabs */
+.auth-tabs {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    margin-bottom: 12px;
+    position: relative;
+    padding-top: 16px;
+}
+
+.auth-tabs::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color), var(--accent-color));
+    border-radius: 3px 3px 0 0;
+}
+
+/* Remove gradient line from modal header for auth */
+.auth-modal-content .modal-header::after {
+    display: none !important;
+}
+
+/* Move close button to right corner outside of header */
+.auth-modal-content .close-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    box-shadow: none;
+    font-size: 1.4rem;
+    z-index: 100;
+}
+
+/* Make auth tab hover not too bright */
+.auth-tab:hover {
+    background: var(--primary-light) !important;
+    opacity: 0.9;
+}
+
+/* Disable ripple effect for auth tabs */
+.auth-subtab .ripple {
+    display: none !important;
 }

@@ -39,22 +39,115 @@ class AuthManager {
             this.googleProvider = new firebase.auth.GoogleAuthProvider();
             
             // Listen for auth state changes
-            auth.onAuthStateChanged((user) => {
+            auth.onAuthStateChanged(async (user) => {
                 this.currentUser = user;
                 this.updateUI();
                 
                 if (user) {
                     console.log('User signed in:', user.email);
-                    // Show toast notification
+                    
+                    // Sync data after sign in
                     if (window.recipeBook) {
                         const displayName = user.displayName || user.email;
                         window.recipeBook.showToast(`Добро пожаловать, ${displayName}! 👋`);
+                        
+                        // Sync data with server
+                        await this.syncUserData();
                     }
                 } else {
                     console.log('User signed out');
-                }
+                    
+n                }
             });
         }
+    }
+
+    // Sync user data: upload local data to Firebase, then load from Firebase
+    async syncUserData() {
+        if (!useFirebase || !db || !this.currentUser) return;
+        
+        try {
+            const userId = this.currentUser.uid;
+            console.log('Syncing data for user:', userId);
+            
+            // Get references to user subcollections
+            const userDocRef = db.collection('users').doc(userId);
+            
+            // Upload local data to Firebase
+            await this.uploadLocalDataToFirebase(userId);
+            
+            // Then load data from Firebase
+            await this.loadDataFromFirebase(userId);
+            
+            console.log('Data synced successfully');
+        } catch (error) {
+            console.error('Error syncing user data:', error);
+        }
+    }
+
+    // Upload localStorage data to Firebase
+    async uploadLocalDataToFirebase(userId) {
+        if (!db) return;
+        
+        try {
+            const collections = ['recipes', 'shoppingList', 'weeklyMenu'];
+            
+            for (const coll of collections) {
+                const localData = localStorage.getItem(coll);
+                if (localData) {
+                    const data = JSON.parse(localData);
+                    if (data && data.length > 0) {
+                        // Upload to user's subcollection
+                        await db.collection('users').doc(userId).collection('data').doc(coll).set({
+                            items: data,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        console.log(`Uploaded ${coll} to Firebase:`, data.length, 'items');
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error uploading local data:', error);
+        }
+    }
+
+    // Load data from Firebase for user
+    async loadDataFromFirebase(userId) {
+        if (!db || !window.recipeBook) return;
+        
+        try {
+            const snapshot = await db.collection('users').doc(userId).collection('data').get();
+            
+            snapshot.forEach(doc => {
+                const coll = doc.id;
+                const data = doc.data();
+                if (data && data.items) {
+                    // Update recipeBook with Firebase data
+                    if (coll === 'recipes') {
+                        window.recipeBook.recipes = data.items;
+                        window.recipeBook.saveToLocalStorage();
+                        window.recipeBook.renderRecipes();
+                        console.log('Loaded recipes from Firebase:', data.items.length);
+                    } else if (coll === 'shoppingList') {
+                        window.recipeBook.items = data.items;
+                        window.recipeBook.saveToLocalStorage();
+                        console.log('Loaded shopping list from Firebase:', data.items.length);
+                    } else if (coll === 'weeklyMenu') {
+                        window.recipeBook.menu = data.items;
+                        window.recipeBook.saveToLocalStorage();
+                        console.log('Loaded menu from Firebase');
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error loading data from Firebase:', error);
+        }
+    }
+
+    // Get user data reference path
+    getUserCollectionPath(collectionName) {
+        if (!this.currentUser) return null;
+        return `users/${this.currentUser.uid}/data/${collectionName}`;
     }
 
     updateUI() {
@@ -993,14 +1086,17 @@ class RecipeBook {
 
     // Load recipes from Firebase or localStorage
     async loadRecipes() {
-        if (useFirebase && db) {
+        if (useFirebase && db && window.authManager && window.authManager.currentUser) {
             try {
-                const snapshot = await db.collection('recipes').get();
-                this.recipes = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                console.log('Recipes loaded from Firebase:', this.recipes.length);
+                const userId = window.authManager.currentUser.uid;
+                const doc = await db.collection('users').doc(userId).collection('data').doc('recipes').get();
+                
+                if (doc.exists && doc.data()) {
+                    this.recipes = doc.data().items || [];
+                    console.log('Recipes loaded from Firebase for user:', this.recipes.length);
+                } else {
+                    this.loadFromLocalStorage();
+                }
             } catch (error) {
                 console.error('Error loading from Firebase:', error);
                 this.loadFromLocalStorage();
@@ -1012,41 +1108,26 @@ class RecipeBook {
 
     // Setup real-time sync with Firebase
     setupRealtimeSync() {
-        if (useFirebase && db) {
+        if (useFirebase && db && window.authManager && window.authManager.currentUser) {
+            const userId = window.authManager.currentUser.uid;
+            
             // Listen for real-time changes
-            db.collection('recipes')
+            db.collection('users').doc(userId).collection('data').doc('recipes')
                 .onSnapshot((snapshot) => {
-                    const changes = snapshot.docChanges();
-                    
-                    if (changes.length > 0) {
-                        console.log('Recipe changes detected:', changes.length);
-                        
-                        // Rebuild recipes list from snapshot
-                        this.recipes = snapshot.docs.map(doc => ({
-                            id: doc.id,
-                            ...doc.data()
-                        }));
-                        
-                        // Save to localStorage
-                        this.saveToLocalStorage();
-                        
-                        // Re-render recipes
-                        this.renderRecipes();
-                        
-                        // Show notification for external changes
-                        const externalChanges = changes.filter(change => 
-                            change.doc.metadata.hasPendingWrites === false
-                        );
-                        
-                        if (externalChanges.length > 0) {
-                            console.log('External recipe changes detected, updating UI');
+                    if (snapshot.exists && snapshot.data()) {
+                        const data = snapshot.data();
+                        if (data.items) {
+                            this.recipes = data.items;
+                            this.saveToLocalStorage();
+                            this.renderRecipes();
+                            console.log('Real-time sync: recipes updated from Firebase');
                         }
                     }
                 }, (error) => {
                     console.error('Error listening to recipe changes:', error);
                 });
 
-            console.log('Real-time sync enabled for recipes');
+            console.log('Real-time sync enabled for user:', userId);
         }
     }
 
@@ -1063,16 +1144,20 @@ class RecipeBook {
         this.saveToLocalStorage();
 
         // Then save to Firebase in background (async)
-        if (useFirebase && db) {
+        if (useFirebase && db && window.authManager && window.authManager.currentUser) {
             try {
-                // Save each recipe to Firebase
-                for (const recipe of this.recipes) {
-                    const { id, ...recipeData } = recipe;
-                    await db.collection('recipes').doc(String(id)).set(recipeData);
-                }
-                console.log('Recipes saved to Firebase');
+                const userId = window.authManager.currentUser.uid;
+                const { id, ...recipeData } = this.recipes;
+                
+                // Save to user's subcollection
+                await db.collection('users').doc(userId).collection('data').doc('recipes').set({
+                    items: this.recipes,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                console.log('Recipes saved to Firebase for user:', userId);
             } catch (error) {
-                console.error('Error saving to Firebase:', error);
+                console.error('Error saving recipes to Firebase:', error);
             }
         }
     }
@@ -2207,12 +2292,14 @@ class MenuPlanner {
 
     // Load menu from Firebase or localStorage
     async loadMenu() {
-        if (useFirebase && db) {
+        if (useFirebase && db && window.authManager && window.authManager.currentUser) {
             try {
-                const doc = await db.collection('settings').doc('weeklyMenu').get();
-                if (doc.exists) {
-                    this.menu = doc.data().menu || {};
-                    console.log('Menu loaded from Firebase:', Object.keys(this.menu).length, 'meals');
+                const userId = window.authManager.currentUser.uid;
+                const doc = await db.collection('users').doc(userId).collection('data').doc('weeklyMenu').get();
+                
+                if (doc.exists && doc.data()) {
+                    this.menu = doc.data().items || {};
+                    console.log('Menu loaded from Firebase for user:', Object.keys(this.menu).length, 'meals');
                 } else {
                     this.loadFromLocalStorage();
                 }
@@ -2238,13 +2325,14 @@ class MenuPlanner {
         this.saveToLocalStorage();
 
         // Then save to Firebase in background (async)
-        if (useFirebase && db) {
+        if (useFirebase && db && window.authManager && window.authManager.currentUser) {
             try {
-                await db.collection('settings').doc('weeklyMenu').set({
-                    menu: this.menu,
-                    updatedAt: new Date().toISOString()
+                const userId = window.authManager.currentUser.uid;
+                await db.collection('users').doc(userId).collection('data').doc('weeklyMenu').set({
+                    items: this.menu,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                console.log('Menu saved to Firebase');
+                console.log('Menu saved to Firebase for user:', userId);
             } catch (error) {
                 console.error('Error saving menu to Firebase:', error);
             }
@@ -2259,31 +2347,24 @@ class MenuPlanner {
 
     // Setup real-time sync with Firebase
     setupRealtimeSync() {
-        if (useFirebase && db) {
+        if (useFirebase && db && window.authManager && window.authManager.currentUser) {
             // Unsubscribe from previous listener if exists
             if (this.unsubscribe) {
                 this.unsubscribe();
             }
 
+            const userId = window.authManager.currentUser.uid;
+            
             // Listen for real-time changes
-            this.unsubscribe = db.collection('settings').doc('weeklyMenu')
+            this.unsubscribe = db.collection('users').doc(userId).collection('data').doc('weeklyMenu')
                 .onSnapshot((doc) => {
-                    if (doc.exists) {
+                    if (doc.exists && doc.data()) {
                         const data = doc.data();
-                        const newMenu = data.menu || {};
-                        
-                        // Check if this is an external change (not from this client)
-                        if (!doc.metadata.hasPendingWrites) {
-                            console.log('External menu changes detected, updating UI');
-                            
-                            // Update menu
-                            this.menu = newMenu;
-                            
-                            // Save to localStorage
+                        if (data.items) {
+                            this.menu = data.items;
                             this.saveToLocalStorage();
-                            
-                            // Re-render week
                             this.renderWeek();
+                            console.log('Real-time sync: menu updated from Firebase');
                         }
                     }
                 }, (error) => {
@@ -2521,14 +2602,17 @@ class ShoppingList {
 
     // Load items from Firebase or localStorage
     async loadItems() {
-        if (useFirebase && db) {
+        if (useFirebase && db && window.authManager && window.authManager.currentUser) {
             try {
-                const snapshot = await db.collection('shoppingList').get();
-                this.items = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                console.log('Shopping list loaded from Firebase:', this.items.length);
+                const userId = window.authManager.currentUser.uid;
+                const doc = await db.collection('users').doc(userId).collection('data').doc('shoppingList').get();
+                
+                if (doc.exists && doc.data()) {
+                    this.items = doc.data().items || [];
+                    console.log('Shopping list loaded from Firebase for user:', this.items.length);
+                } else {
+                    this.loadFromLocalStorage();
+                }
             } catch (error) {
                 console.error('Error loading shopping list from Firebase:', error);
                 this.loadFromLocalStorage();
@@ -2551,14 +2635,14 @@ class ShoppingList {
         this.saveToLocalStorage();
 
         // Then save to Firebase in background (async)
-        if (useFirebase && db) {
+        if (useFirebase && db && window.authManager && window.authManager.currentUser) {
             try {
-                // Save each item to Firebase
-                for (const item of this.items) {
-                    const { id, ...itemData } = item;
-                    await db.collection('shoppingList').doc(String(id)).set(itemData);
-                }
-                console.log('Shopping list saved to Firebase');
+                const userId = window.authManager.currentUser.uid;
+                await db.collection('users').doc(userId).collection('data').doc('shoppingList').set({
+                    items: this.items,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                console.log('Shopping list saved to Firebase for user:', userId);
             } catch (error) {
                 console.error('Error saving shopping list to Firebase:', error);
             }
@@ -2573,42 +2657,24 @@ class ShoppingList {
 
     // Setup real-time sync with Firebase
     setupRealtimeSync() {
-        if (useFirebase && db) {
+        if (useFirebase && db && window.authManager && window.authManager.currentUser) {
             // Unsubscribe from previous listener if exists
             if (this.unsubscribe) {
                 this.unsubscribe();
             }
 
+            const userId = window.authManager.currentUser.uid;
+            
             // Listen for real-time changes
-            this.unsubscribe = db.collection('shoppingList')
+            this.unsubscribe = db.collection('users').doc(userId).collection('data').doc('shoppingList')
                 .onSnapshot((snapshot) => {
-                    const changes = snapshot.docChanges();
-                    
-                    if (changes.length > 0) {
-                        console.log('Shopping list changes detected:', changes.length);
-                        
-                        // Rebuild items list from snapshot
-                        this.items = snapshot.docs.map(doc => ({
-                            id: doc.id,
-                            ...doc.data()
-                        }));
-                        
-                        // Save to localStorage
-                        this.saveToLocalStorage();
-                        
-                        // Re-render items
-                        this.renderItems();
-                        
-                        // Show notification for external changes
-                        if (changes.some(change => change.type !== 'added' || change.doc.metadata.hasPendingWrites === false)) {
-                            // Check if this is an external change (not from this client)
-                            const externalChanges = changes.filter(change => 
-                                change.doc.metadata.hasPendingWrites === false
-                            );
-                            
-                            if (externalChanges.length > 0) {
-                                console.log('External changes detected, updating UI');
-                            }
+                    if (snapshot.exists && snapshot.data()) {
+                        const data = snapshot.data();
+                        if (data.items) {
+                            this.items = data.items;
+                            this.saveToLocalStorage();
+                            this.renderItems();
+                            console.log('Real-time sync: shopping list updated from Firebase');
                         }
                     }
                 }, (error) => {
