@@ -2649,6 +2649,7 @@ class ShoppingList {
         this.recipeBook = recipeBook;
         this.items = [];
         this.unsubscribe = null; // Для отписки от слушателя Firebase
+        this.editingItemId = null; // ID редактируемого товара
         this.init();
     }
 
@@ -2793,6 +2794,7 @@ class ShoppingList {
                     ${item.quantity ? `<span class="shopping-item-quantity">${this.escapeHtml(item.quantity)}</span>` : ''}
                     ${categoryHtml}
                 </div>
+                <button class="shopping-item-edit" data-id="${item.id}" title="Редактировать">✏️</button>
                 <button class="shopping-item-delete" data-id="${item.id}" title="Удалить">🗑️</button>
             </div>
         `;
@@ -2804,6 +2806,13 @@ class ShoppingList {
                 const itemElement = e.target.closest('.shopping-item');
                 const itemId = itemElement.dataset.id;
                 this.toggleComplete(itemId);
+            });
+        });
+
+        document.querySelectorAll('.shopping-item-edit').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const itemId = e.target.dataset.id;
+                this.openEditModal(itemId);
             });
         });
 
@@ -2847,6 +2856,25 @@ class ShoppingList {
     }
 
     openAddModal() {
+        this.editingItemId = null;
+        document.getElementById('shoppingModalTitle').textContent = 'Добавить товар';
+        document.getElementById('shoppingSubmitText').textContent = 'Добавить в список';
+        document.getElementById('shoppingForm').reset();
+        document.getElementById('shoppingModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+        document.getElementById('shoppingItemName').focus();
+    }
+
+    openEditModal(itemId) {
+        const item = this.items.find(i => String(i.id) === String(itemId));
+        if (!item) return;
+
+        this.editingItemId = itemId;
+        document.getElementById('shoppingModalTitle').textContent = 'Редактировать товар';
+        document.getElementById('shoppingSubmitText').textContent = 'Сохранить изменения';
+        document.getElementById('shoppingItemName').value = item.name || '';
+        document.getElementById('shoppingItemQuantity').value = item.quantity || '';
+        document.getElementById('shoppingItemCategory').value = item.category || 'other';
         document.getElementById('shoppingModal').classList.add('active');
         document.body.style.overflow = 'hidden';
         document.getElementById('shoppingItemName').focus();
@@ -2856,6 +2884,7 @@ class ShoppingList {
         document.getElementById('shoppingModal').classList.remove('active');
         document.body.style.overflow = '';
         document.getElementById('shoppingForm').reset();
+        this.editingItemId = null;
     }
 
     addItem() {
@@ -2865,6 +2894,13 @@ class ShoppingList {
 
         if (!name) return;
 
+        // Если редактируем существующий товар
+        if (this.editingItemId) {
+            this.editItem(this.editingItemId, name, quantity, category);
+            return;
+        }
+
+        // Добавляем новый товар
         const item = {
             id: Date.now(),
             name,
@@ -2879,6 +2915,21 @@ class ShoppingList {
         this.renderItems();
         this.closeModal();
         this.recipeBook.showToast('Товар добавлен в список! 🛒');
+    }
+
+    editItem(itemId, name, quantity, category) {
+        const item = this.items.find(i => String(i.id) === String(itemId));
+        if (!item) return;
+
+        item.name = name;
+        item.quantity = quantity;
+        item.category = category;
+        item.updatedAt = new Date().toISOString();
+
+        this.saveItems();
+        this.renderItems();
+        this.closeModal();
+        this.recipeBook.showToast('Товар обновлен ✏️');
     }
 
     toggleComplete(id) {
