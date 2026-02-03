@@ -11,16 +11,150 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let db = null;
+let auth = null;
 let useFirebase = false;
 
 try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
+    auth = firebase.auth();
     useFirebase = true;
     console.log('Firebase initialized successfully');
 } catch (error) {
     console.warn('Firebase not configured, using localStorage:', error.message);
     useFirebase = false;
+}
+
+// Auth Manager Class
+class AuthManager {
+    constructor() {
+        this.currentUser = null;
+        this.googleProvider = null;
+        this.init();
+    }
+
+    init() {
+        if (useFirebase && auth) {
+            // Initialize Google provider
+            this.googleProvider = new firebase.auth.GoogleAuthProvider();
+            
+            // Listen for auth state changes
+            auth.onAuthStateChanged((user) => {
+                this.currentUser = user;
+                this.updateUI();
+                
+                if (user) {
+                    console.log('User signed in:', user.email);
+                    // Show toast notification
+                    if (window.recipeBook) {
+                        const displayName = user.displayName || user.email;
+                        window.recipeBook.showToast(`Добро пожаловать, ${displayName}! 👋`);
+                    }
+                } else {
+                    console.log('User signed out');
+                }
+            });
+        }
+    }
+
+    updateUI() {
+        const authToggle = document.getElementById('authToggle');
+        const authText = document.getElementById('authText');
+        const authIcon = document.querySelector('.auth-icon');
+
+        if (this.currentUser) {
+            authText.textContent = 'Выйти';
+            authIcon.textContent = '🚪';
+            authToggle.title = 'Выйти из аккаунта';
+        } else {
+            authText.textContent = 'Войти';
+            authIcon.textContent = '👤';
+            authToggle.title = 'Войти в аккаунт';
+        }
+    }
+
+    async signIn(email, password) {
+        if (!useFirebase || !auth) {
+            throw new Error('Firebase Auth не доступен');
+        }
+
+        try {
+            const userCredential = await auth.signInWithEmailAndPassword(email, password);
+            return userCredential.user;
+        } catch (error) {
+            console.error('Sign in error:', error);
+            throw this.getAuthError(error);
+        }
+    }
+
+    async signUp(email, password, name) {
+        if (!useFirebase || !auth) {
+            throw new Error('Firebase Auth не доступен');
+        }
+
+        try {
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            
+            // Update user profile with name
+            if (name) {
+                await userCredential.user.updateProfile({
+                    displayName: name
+                });
+            }
+            
+            return userCredential.user;
+        } catch (error) {
+            console.error('Sign up error:', error);
+            throw this.getAuthError(error);
+        }
+    }
+
+    async signInWithGoogle() {
+        if (!useFirebase || !auth) {
+            throw new Error('Firebase Auth не доступен');
+        }
+
+        try {
+            const result = await auth.signInWithPopup(this.googleProvider);
+            return result.user;
+        } catch (error) {
+            console.error('Google sign in error:', error);
+            throw this.getAuthError(error);
+        }
+    }
+
+    async signOut() {
+        if (!useFirebase || !auth) {
+            return;
+        }
+
+        try {
+            await auth.signOut();
+            if (window.recipeBook) {
+                window.recipeBook.showToast('Вы вышли из аккаунта 👋');
+            }
+        } catch (error) {
+            console.error('Sign out error:', error);
+            throw error;
+        }
+    }
+
+    getAuthError(error) {
+        const errorMessages = {
+            'auth/email-already-in-use': 'Этот email уже зарегистрирован',
+            'auth/invalid-email': 'Некорректный email',
+            'auth/weak-password': 'Пароль должен содержать минимум 6 символов',
+            'auth/user-not-found': 'Пользователь не найден',
+            'auth/wrong-password': 'Неверный пароль',
+            'auth/too-many-requests': 'Слишком много попыток. Попробуйте позже',
+            'auth/network-request-failed': 'Ошибка сети. Проверьте подключение к интернету',
+            'auth/popup-closed-by-user': 'Окно входа было закрыто',
+            'auth/cancelled-popup-request': 'Вход через Google был отменен',
+            'auth/unauthorized-domain': 'Домен не авторизован для Google OAuth'
+        };
+
+        return errorMessages[error.code] || error.message || 'Произошла ошибка';
+    }
 }
 
 // Recipe Parser Class
@@ -2720,5 +2854,137 @@ document.addEventListener('DOMContentLoaded', () => {
     new ParticlesAnimation();
     // ParallaxEffect disabled - removed parallax effect
     // new ParallaxEffect();
-    new RecipeBook();
+    
+    // Initialize Auth Manager
+    window.authManager = new AuthManager();
+    
+    // Initialize Recipe Book
+    window.recipeBook = new RecipeBook();
+    
+    // Bind auth events
+    bindAuthEvents();
 });
+
+// Bind authentication events
+function bindAuthEvents() {
+    const authToggle = document.getElementById('authToggle');
+    const authModal = document.getElementById('authModal');
+    const closeAuthModal = document.getElementById('closeAuthModal');
+    const authForm = document.getElementById('authForm');
+    const authSubtabs = document.querySelectorAll('.auth-subtab');
+    const authTitle = document.getElementById('authTitle');
+    const authSubmitBtn = document.getElementById('authSubmitBtn');
+    const authSubmitText = document.getElementById('authSubmitText');
+    const nameGroup = document.getElementById('nameGroup');
+    const authError = document.getElementById('authError');
+    const googleAuthBtn = document.getElementById('googleAuthBtn');
+    
+    let currentMode = 'login'; // 'login' or 'register'
+    
+    // Toggle auth modal
+    authToggle.addEventListener('click', () => {
+        if (window.authManager.currentUser) {
+            // Sign out
+            window.authManager.signOut();
+        } else {
+            // Open auth modal
+            authModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            document.getElementById('authEmail').focus();
+        }
+    });
+    
+    // Close auth modal
+    closeAuthModal.addEventListener('click', () => {
+        authModal.classList.remove('active');
+        document.body.style.overflow = '';
+        authForm.reset();
+        authError.style.display = 'none';
+    });
+    
+    // Close on backdrop click
+    authModal.addEventListener('click', (e) => {
+        if (e.target.id === 'authModal') {
+            authModal.classList.remove('active');
+            document.body.style.overflow = '';
+            authForm.reset();
+            authError.style.display = 'none';
+        }
+    });
+    
+    // Subtab switching (Login/Register)
+    authSubtabs.forEach(subtab => {
+        subtab.addEventListener('click', () => {
+            authSubtabs.forEach(t => t.classList.remove('active'));
+            subtab.classList.add('active');
+            
+            currentMode = subtab.dataset.subtab;
+            
+            if (currentMode === 'login') {
+                authSubmitText.textContent = 'Войти';
+                nameGroup.style.display = 'none';
+            } else {
+                authSubmitText.textContent = 'Зарегистрироваться';
+                nameGroup.style.display = 'block';
+            }
+            
+            authError.style.display = 'none';
+        });
+    });
+    
+    // Google auth
+    googleAuthBtn.addEventListener('click', async () => {
+        authError.style.display = 'none';
+        googleAuthBtn.disabled = true;
+        googleAuthBtn.querySelector('.google-text').textContent = 'Вход...';
+        
+        try {
+            await window.authManager.signInWithGoogle();
+            authModal.classList.remove('active');
+            document.body.style.overflow = '';
+            authForm.reset();
+        } catch (error) {
+            authError.textContent = error;
+            authError.style.display = 'block';
+        } finally {
+            googleAuthBtn.disabled = false;
+            googleAuthBtn.querySelector('.google-text').textContent = 'Войти через Google';
+        }
+    });
+    
+    // Email form submission
+    authForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const email = document.getElementById('authEmail').value.trim();
+        const password = document.getElementById('authPassword').value;
+        const name = document.getElementById('authName').value.trim();
+        
+        // Disable submit button
+        authSubmitBtn.disabled = true;
+        authSubmitText.textContent = currentMode === 'login' ? 'Вход...' : 'Регистрация...';
+        authError.style.display = 'none';
+        
+        try {
+            if (currentMode === 'login') {
+                await window.authManager.signIn(email, password);
+            } else {
+                await window.authManager.signUp(email, password, name);
+            }
+            
+            // Close modal on success
+            authModal.classList.remove('active');
+            document.body.style.overflow = '';
+            authForm.reset();
+            
+        } catch (error) {
+            // Show error
+            authError.textContent = error;
+            authError.style.display = 'block';
+        } finally {
+            // Re-enable submit button
+            authSubmitBtn.disabled = false;
+            authSubmitText.textContent = currentMode === 'login' ? 'Войти' : 'Зарегистрироваться';
+        }
+    });
+}
