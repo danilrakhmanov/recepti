@@ -162,25 +162,26 @@ body::before {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 10px;
     margin: 0 auto 20px;
-    padding: 18px 40px;
+    padding: 12px 30px;
     background: linear-gradient(135deg, var(--primary-color), var(--secondary-color), var(--accent-color));
     background-size: 300% 300%;
     color: white;
     border: none;
     border-radius: 50px;
     font-family: 'Comfortaa', cursive;
-    font-size: 1.15rem;
+    font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     box-shadow:
         0 4px 15px rgba(255, 107, 157, 0.3),
         0 0 0 0 rgba(255, 107, 157, 0.4);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    animation: fadeInUp 0.8s ease-out 0.2s backwards, gradientShift 4s ease infinite, pulse 2s ease-in-out infinite;
+    animation: fadeInUp 0.8s ease-out 0.2s backwards, gradientShift 4s ease infinite;
     position: relative;
     overflow: hidden;
+    min-width: 140px;
 }
 
 .my-recipes-btn::before {
@@ -191,25 +192,37 @@ body::before {
     width: 100%;
     height: 100%;
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    transition: left 0.5s;
+    opacity: 0;
 }
 
 .my-recipes-btn:hover::before {
-    left: 100%;
+    opacity: 1;
+    animation: shine 0.5s ease-out;
 }
 
 .my-recipes-btn:hover {
     transform: translateY(-6px) scale(1.08);
-    box-shadow:
-        0 20px 40px rgba(255, 107, 157, 0.5),
-        0 0 30px rgba(255, 107, 157, 0.3);
+    box-shadow: 0 12px 24px rgba(255, 107, 157, 0.25);
 }
 
 .my-recipes-btn:active {
     transform: translateY(-3px) scale(1.02);
-    box-shadow:
-        0 10px 20px rgba(255, 107, 157, 0.4),
-        0 0 15px rgba(255, 107, 157, 0.2);
+    box-shadow: 0 6px 12px rgba(255, 107, 157, 0.2);
+}
+
+.my-recipes-btn.active {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+@keyframes shine {
+    0% {
+        left: -100%;
+        opacity: 1;
+    }
+    100% {
+        left: 100%;
+        opacity: 1;
+    }
 }
 
 /* Quick Actions */
@@ -255,25 +268,33 @@ body::before {
     width: 100%;
     height: 100%;
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    transition: left 0.5s;
+    opacity: 0;
 }
 
 .quick-action-btn:hover::before {
-    left: 100%;
+    opacity: 1;
+    animation: shine 0.5s ease-out;
+}
+
+@keyframes shine {
+    0% {
+        left: -100%;
+        opacity: 1;
+    }
+    100% {
+        left: 100%;
+        opacity: 1;
+    }
 }
 
 .quick-action-btn:hover {
     transform: translateY(-6px) scale(1.08);
-    box-shadow:
-        0 20px 40px rgba(255, 107, 157, 0.5),
-        0 0 30px rgba(255, 107, 157, 0.3);
+    box-shadow: 0 12px 24px rgba(255, 107, 157, 0.25);
 }
 
 .quick-action-btn:active {
     transform: translateY(-3px) scale(1.02);
-    box-shadow:
-        0 10px 20px rgba(255, 107, 157, 0.4),
-        0 0 15px rgba(255, 107, 157, 0.2);
+    box-shadow: 0 6px 12px rgba(255, 107, 157, 0.2);
 }
 
 .quick-action-icon {
@@ -285,33 +306,14 @@ body::before {
     font-size: 0.85rem;
 }
 
-.add-recipe-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    transition: left 0.5s;
-}
-
-.add-recipe-btn:hover::before {
-    left: 100%;
-}
-
 .add-recipe-btn:hover {
-    transform: translateY(-6px) scale(1.08);
-    box-shadow:
-        0 20px 40px rgba(255, 107, 157, 0.5),
-        0 0 30px rgba(255, 107, 157, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(255, 107, 157, 0.3);
 }
 
 .add-recipe-btn:active {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow:
-        0 10px 20px rgba(255, 107, 157, 0.4),
-        0 0 15px rgba(255, 107, 157, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(255, 107, 157, 0.2);
 }
 
 @keyframes pulse {
@@ -328,7 +330,9 @@ body::before {
 }
 
 /* Ripple Effect - disabled for auth */
-.auth-subtab .ripple {
+.auth-subtab .ripple,
+.tab-btn .ripple,
+.mobile-nav-item .ripple {
     display: none;
 }
 
@@ -465,9 +469,12 @@ body::before {
     cursor: pointer;
     box-shadow: var(--shadow-sm);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 140px;
+}
+
+.tab-btn {
     position: relative;
     overflow: hidden;
-    min-width: 140px;
 }
 
 .tab-btn::before {
@@ -477,25 +484,35 @@ body::before {
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    transition: left 0.5s;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    opacity: 0;
 }
 
 .tab-btn:hover::before {
-    left: 100%;
+    opacity: 1;
+    animation: shine 0.5s ease-out;
+}
+
+@keyframes shine {
+    0% {
+        left: -100%;
+        opacity: 1;
+    }
+    100% {
+        left: 100%;
+        opacity: 1;
+    }
 }
 
 .tab-btn:hover {
     transform: translateY(-3px) scale(1.05);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-sm);
     color: var(--primary-color);
 }
 
 .tab-btn.active {
     background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
     color: white;
-    box-shadow: 0 8px 20px rgba(255, 107, 157, 0.4);
-    transform: scale(1.05);
 }
 
 .tab-btn.active:hover {
@@ -527,7 +544,6 @@ body::before {
 .favorites-tab.active {
     background: linear-gradient(135deg, #ef4444, #dc2626);
     color: white;
-    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
 }
 
 [data-theme="dark"] .favorites-tab {
@@ -1131,7 +1147,7 @@ body::before {
 }
 
 .empty-state .add-recipe-btn {
-    animation: fadeInUp 0.6s ease-out 0.7s backwards, pulse 2s ease-in-out infinite;
+    animation: fadeInUp 0.6s ease-out 0.7s backwards;
 }
 
 @keyframes pulse {
@@ -1192,7 +1208,7 @@ body::before {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 28px 16px;
+    padding: 20px 28px 20px;
     border-bottom: 2px solid rgba(255, 107, 157, 0.1);
     position: relative;
 }
@@ -1310,6 +1326,15 @@ body::before {
     position: relative;
 }
 
+/* Shopping form - smaller gaps */
+.shopping-form .form-group {
+    margin-bottom: 14px;
+}
+
+.shopping-form .form-label {
+    margin-bottom: 8px;
+}
+
 .form-label {
     display: block;
     margin-bottom: 10px;
@@ -1397,6 +1422,15 @@ body::before {
     text-overflow: '';
 }
 
+/* Priority select */
+#shoppingItemPriority.form-select {
+    border-color: var(--border-color, #e5e7eb);
+}
+
+#shoppingItemPriority.form-select:focus {
+    border-color: var(--primary-color);
+}
+
 /* Hide default arrow in IE */
 .form-select::-ms-expand {
     display: none;
@@ -1453,6 +1487,23 @@ body::before {
 [data-theme="dark"] .form-select:hover,
 [data-theme="dark"] .form-textarea:hover {
     border-color: #6b7280;
+}
+
+/* Dark theme for priority select */
+[data-theme="dark"] #shoppingItemPriority.form-select {
+    background-color: rgba(30, 30, 40, 0.95);
+    border-color: #4b5563;
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] #shoppingItemPriority.form-select:focus {
+    border-color: var(--primary-color);
+}
+
+/* Style options in dark theme */
+[data-theme="dark"] #shoppingItemPriority option {
+    background: #1f2937;
+    color: #f3f4f6;
 }
 
 /* URL Input Group with Parse Button */
@@ -1535,6 +1586,11 @@ body::before {
 
 [data-theme="dark"] .form-select {
     background-image: none;
+}
+
+[data-theme="dark"] .form-select option {
+    background: #1f2937;
+    color: #f3f4f6;
 }
 
 [data-theme="dark"] .form-select:focus {
@@ -3111,6 +3167,22 @@ body::before {
     font-size: 1rem;
     font-weight: 500;
     color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.shopping-item-priority {
+    color: #f59e0b;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.shopping-item-extras {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
 }
 
 .shopping-item-quantity {
@@ -3127,6 +3199,15 @@ body::before {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+.shopping-item.high-priority {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.1));
+    border-left: 4px solid #f59e0b;
+}
+
+.shopping-item.high-priority:hover {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.15));
 }
 
 .shopping-item-delete {
@@ -3147,27 +3228,6 @@ body::before {
 
 .shopping-item-delete:hover {
     background: rgba(239, 68, 68, 0.2);
-    transform: scale(1.1);
-}
-
-.shopping-item-edit {
-    background: rgba(59, 130, 246, 0.1);
-    border: none;
-    border-radius: 8px;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: #3b82f6;
-    font-size: 1.1rem;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-.shopping-item-edit:hover {
-    background: rgba(59, 130, 246, 0.2);
     transform: scale(1.1);
 }
 

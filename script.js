@@ -2724,13 +2724,16 @@ class ShoppingList {
             }
 
             const userId = window.authManager.currentUser.uid;
+            let isUpdatingFromServer = false;
             
             // Listen for real-time changes
             this.unsubscribe = db.collection('users').doc(userId).collection('data').doc('shoppingList')
                 .onSnapshot((snapshot) => {
+                    if (isUpdatingFromServer) return; // Пропускаем, если обновляем с локального источника
+                    
                     if (snapshot.exists && snapshot.data()) {
                         const data = snapshot.data();
-                        if (data.items) {
+                        if (data.items && JSON.stringify(data.items) !== JSON.stringify(this.items)) {
                             this.items = data.items;
                             this.saveToLocalStorage();
                             this.renderItems();
@@ -2764,7 +2767,15 @@ class ShoppingList {
         }
 
         emptyState.style.display = 'none';
-        container.innerHTML = this.items.map(item => this.createItemHtml(item)).join('');
+        
+        // Сортировка: высокий приоритет сначала, затем по дате добавления
+        const sortedItems = [...this.items].sort((a, b) => {
+            if (a.priority === 'high' && b.priority !== 'high') return -1;
+            if (a.priority !== 'high' && b.priority === 'high') return 1;
+            return (b.createdAt || '').localeCompare(a.createdAt || '');
+        });
+        
+        container.innerHTML = sortedItems.map(item => this.createItemHtml(item)).join('');
 
         this.bindItemEvents();
     }
@@ -2786,39 +2797,47 @@ class ShoppingList {
             ? `<span class="shopping-item-category">${categoryLabels[item.category] || item.category}</span>`
             : '';
 
+        const priorityHtml = item.priority === 'high' ? '<span class="shopping-item-priority">⭐</span>' : '';
+
         return `
-            <div class="shopping-item ${item.completed ? 'completed' : ''}" data-id="${item.id}">
+            <div class="shopping-item ${item.completed ? 'completed' : ''} ${item.priority === 'high' ? 'high-priority' : ''}" data-id="${item.id}">
                 <div class="shopping-item-checkbox ${item.completed ? 'checked' : ''}"></div>
                 <div class="shopping-item-content">
-                    <span class="shopping-item-name">${this.escapeHtml(item.name)}</span>
-                    ${item.quantity ? `<span class="shopping-item-quantity">${this.escapeHtml(item.quantity)}</span>` : ''}
-                    ${categoryHtml}
+                    <span class="shopping-item-name">${this.escapeHtml(item.name)}${priorityHtml}</span>
+                    <span class="shopping-item-extras">
+                        ${item.quantity ? `<span class="shopping-item-quantity">${this.escapeHtml(item.quantity)}</span>` : ''}
+                        ${categoryHtml}
+                    </span>
                 </div>
-                <button class="shopping-item-edit" data-id="${item.id}" title="Редактировать">✏️</button>
                 <button class="shopping-item-delete" data-id="${item.id}" title="Удалить">🗑️</button>
             </div>
         `;
     }
 
     bindItemEvents() {
-        document.querySelectorAll('.shopping-item-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('click', (e) => {
-                const itemElement = e.target.closest('.shopping-item');
-                const itemId = itemElement.dataset.id;
-                this.toggleComplete(itemId);
-            });
-        });
-
-        document.querySelectorAll('.shopping-item-edit').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const itemId = e.target.dataset.id;
+        document.querySelectorAll('.shopping-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                // Если клик на чекбокс, отмечаем товар
+                if (e.target.classList.contains('shopping-item-checkbox') || 
+                    e.target.closest('.shopping-item-checkbox')) {
+                    const itemId = item.dataset.id;
+                    this.toggleComplete(itemId);
+                    return;
+                }
+                
+                // Если клик на кнопку удаления, не открываем редактирование
+                if (e.target.closest('.shopping-item-delete')) return;
+                
+                // Иначе открываем редактирование
+                const itemId = item.dataset.id;
                 this.openEditModal(itemId);
             });
         });
 
         document.querySelectorAll('.shopping-item-delete').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const itemId = e.target.dataset.id;
+                e.stopPropagation(); // Останавливаем всплытие чтобы не открылся edit modal
+                const itemId = e.target.closest('.shopping-item').dataset.id;
                 this.deleteItem(itemId);
             });
         });
@@ -2875,6 +2894,7 @@ class ShoppingList {
         document.getElementById('shoppingItemName').value = item.name || '';
         document.getElementById('shoppingItemQuantity').value = item.quantity || '';
         document.getElementById('shoppingItemCategory').value = item.category || 'other';
+        document.getElementById('shoppingItemPriority').value = item.priority || 'normal';
         document.getElementById('shoppingModal').classList.add('active');
         document.body.style.overflow = 'hidden';
         document.getElementById('shoppingItemName').focus();
@@ -2891,12 +2911,13 @@ class ShoppingList {
         const name = document.getElementById('shoppingItemName').value.trim();
         const quantity = document.getElementById('shoppingItemQuantity').value.trim();
         const category = document.getElementById('shoppingItemCategory').value;
+        const priority = document.getElementById('shoppingItemPriority').value;
 
         if (!name) return;
 
         // Если редактируем существующий товар
         if (this.editingItemId) {
-            this.editItem(this.editingItemId, name, quantity, category);
+            this.editItem(this.editingItemId, name, quantity, category, priority);
             return;
         }
 
@@ -2906,6 +2927,7 @@ class ShoppingList {
             name,
             quantity,
             category,
+            priority,
             completed: false,
             createdAt: new Date().toISOString()
         };
@@ -2917,13 +2939,14 @@ class ShoppingList {
         this.recipeBook.showToast('Товар добавлен в список! 🛒');
     }
 
-    editItem(itemId, name, quantity, category) {
+    editItem(itemId, name, quantity, category, priority) {
         const item = this.items.find(i => String(i.id) === String(itemId));
         if (!item) return;
 
         item.name = name;
         item.quantity = quantity;
         item.category = category;
+        item.priority = priority;
         item.updatedAt = new Date().toISOString();
 
         this.saveItems();
@@ -2936,8 +2959,20 @@ class ShoppingList {
         const item = this.items.find(i => String(i.id) === String(id));
         if (item) {
             item.completed = !item.completed;
+            
+            // Обновляем только DOM элемент без полного перерендера
+            const itemElement = document.querySelector(`.shopping-item[data-id="${id}"]`);
+            if (itemElement) {
+                if (item.completed) {
+                    itemElement.classList.add('completed');
+                    itemElement.querySelector('.shopping-item-checkbox').classList.add('checked');
+                } else {
+                    itemElement.classList.remove('completed');
+                    itemElement.querySelector('.shopping-item-checkbox').classList.remove('checked');
+                }
+            }
+            
             this.saveItems();
-            this.renderItems();
         }
     }
 

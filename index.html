@@ -138,7 +138,6 @@
             <div class="planner-header">
                 <h2 class="planner-title"><span class="planner-emoji">📅</span> <span class="planner-text">Меню на неделю</span></h2>
                 <button class="planner-action-btn" id="generateShoppingListBtn">
-                    <span>🛒</span>
                     <span>Сформировать список покупок</span>
                 </button>
             </div>
@@ -153,15 +152,12 @@
                 <h2 class="shopping-title"><span class="shopping-emoji">🛒</span> <span class="shopping-text">Список покупок</span></h2>
                 <div class="shopping-actions">
                     <button class="shopping-action-btn primary" id="addShoppingItemBtn">
-                        <span>➕</span>
                         <span>Добавить</span>
                     </button>
                     <button class="shopping-action-btn warning" id="clearCompletedBtn">
-                        <span>✅</span>
                         <span>Очистить выполненные</span>
                     </button>
                     <button class="shopping-action-btn danger" id="clearAllBtn">
-                        <span>🗑️</span>
                         <span>Очистить всё</span>
                     </button>
                 </div>
@@ -399,8 +395,14 @@
                         <option value="other">📦 Другое</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Приоритет (необязательно)</label>
+                    <select class="form-select" id="shoppingItemPriority">
+                        <option value="normal">Обычный</option>
+                        <option value="high">Высокий ⭐</option>
+                    </select>
+                </div>
                 <button type="submit" class="submit-btn">
-                    <span class="btn-icon">💾</span>
                     <span class="btn-text" id="shoppingSubmitText">Добавить в список</span>
                 </button>
             </form>
