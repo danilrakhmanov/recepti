@@ -1247,8 +1247,16 @@ class RecipeBook {
             this.setFilter('all');
         });
 
-        // Add recipe quick button
-        document.getElementById('addRecipeQuickBtn').addEventListener('click', () => {
+        // Add recipe quick button (old, hidden)
+        const addRecipeQuickBtn = document.getElementById('addRecipeQuickBtn');
+        if (addRecipeQuickBtn) {
+            addRecipeQuickBtn.addEventListener('click', () => {
+                this.openModal();
+            });
+        }
+
+        // Add recipe tab button (new, in filter-tabs)
+        document.getElementById('addRecipeTabBtn').addEventListener('click', () => {
             this.openModal();
         });
 
@@ -1621,7 +1629,7 @@ class RecipeBook {
         this.addStepField();
 
         document.getElementById('modal').classList.add('active');
-        document.body.style.overflow = 'hidden';
+        document.body.classList.add('modal-open');
         document.getElementById('recipeName').focus();
     }
 
@@ -1676,7 +1684,7 @@ class RecipeBook {
     // Close modal
     closeModal() {
         document.getElementById('modal').classList.remove('active');
-        document.body.style.overflow = '';
+        document.body.classList.remove('modal-open');
         document.getElementById('recipeForm').reset();
 
         // Reset ingredients
@@ -1779,7 +1787,7 @@ class RecipeBook {
         this.recipeToDelete = id;
         const deleteModal = document.getElementById('deleteModal');
         deleteModal.classList.add('active');
-        document.body.style.overflow = 'hidden';
+        document.body.classList.add('modal-open');
     }
 
     // Confirm delete
@@ -1803,7 +1811,7 @@ class RecipeBook {
     closeDeleteModal() {
         const deleteModal = document.getElementById('deleteModal');
         deleteModal.classList.remove('active');
-        document.body.style.overflow = '';
+        document.body.classList.remove('modal-open');
         this.recipeToDelete = null;
     }
 
@@ -1908,13 +1916,13 @@ class RecipeBook {
 
         // Show modal
         document.getElementById('recipeDetailModal').classList.add('active');
-        document.body.style.overflow = 'hidden';
+        document.body.classList.add('modal-open');
     }
 
     // Close recipe detail modal
     closeDetailModal() {
         document.getElementById('recipeDetailModal').classList.remove('active');
-        document.body.style.overflow = '';
+        document.body.classList.remove('modal-open');
     }
 
     // Toggle favorite
@@ -1967,6 +1975,8 @@ class RecipeBook {
         const shoppingList = document.getElementById('shoppingList');
         const emptyState = document.getElementById('emptyState');
         const filterTabs = document.querySelector('.filter-tabs');
+        const addRecipeSection = document.querySelector('.add-recipe-section');
+        const favoritesSection = document.querySelector('.favorites-section');
         const mobileNav = document.getElementById('mobileNav');
         const searchContainer = document.querySelector('.search-container');
 
@@ -1981,6 +1991,8 @@ class RecipeBook {
             shoppingList.style.display = 'none';
             // Hide navigation and search
             filterTabs.classList.add('hidden');
+            if (addRecipeSection) addRecipeSection.classList.add('hidden');
+            if (favoritesSection) favoritesSection.classList.add('hidden');
             mobileNav.classList.add('hidden');
             searchContainer.style.display = 'none';
             if (!this.menuPlanner) {
@@ -1993,6 +2005,8 @@ class RecipeBook {
             shoppingList.style.display = 'block';
             // Hide navigation and search
             filterTabs.classList.add('hidden');
+            if (addRecipeSection) addRecipeSection.classList.add('hidden');
+            if (favoritesSection) favoritesSection.classList.add('hidden');
             mobileNav.classList.add('hidden');
             searchContainer.style.display = 'none';
             if (!this.shoppingList) {
@@ -2004,12 +2018,11 @@ class RecipeBook {
             recipeGrid.style.display = 'grid';
             menuPlanner.style.display = 'none';
             shoppingList.style.display = 'none';
-            // Show navigation and search only if we were in planner or shopping
-            if (!wasRecipeFilter) {
-                filterTabs.classList.remove('hidden');
-                mobileNav.classList.remove('hidden');
-                searchContainer.style.display = 'block';
-            }
+            // Show navigation, search and add-recipe button
+            filterTabs.classList.remove('hidden');
+            if (addRecipeSection) addRecipeSection.classList.remove('hidden');
+            mobileNav.classList.remove('hidden');
+            searchContainer.style.display = 'block';
             this.renderRecipes();
         }
     }
@@ -2571,7 +2584,7 @@ class MenuPlanner {
         `;
 
         document.body.insertAdjacentHTML('beforeend', modalHtml);
-        document.body.style.overflow = 'hidden';
+        document.body.classList.add('modal-open');
 
         // Show modal with a small delay to ensure it's rendered
         setTimeout(() => {
@@ -2618,7 +2631,7 @@ class MenuPlanner {
             modal.classList.remove('active');
             setTimeout(() => {
                 modal.remove();
-                document.body.style.overflow = '';
+                document.body.classList.remove('modal-open');
             }, 300);
         }
     }
@@ -2897,7 +2910,7 @@ class ShoppingList {
         document.getElementById('shoppingSubmitText').textContent = 'Добавить в список';
         document.getElementById('shoppingForm').reset();
         document.getElementById('shoppingModal').classList.add('active');
-        document.body.style.overflow = 'hidden';
+        document.body.classList.add('modal-open');
         document.getElementById('shoppingItemName').focus();
     }
 
@@ -2913,13 +2926,13 @@ class ShoppingList {
         document.getElementById('shoppingItemCategory').value = item.category || '';
         document.getElementById('shoppingItemPriority').value = item.priority || 'normal';
         document.getElementById('shoppingModal').classList.add('active');
-        document.body.style.overflow = 'hidden';
+        document.body.classList.add('modal-open');
         document.getElementById('shoppingItemName').focus();
     }
 
     closeModal() {
         document.getElementById('shoppingModal').classList.remove('active');
-        document.body.style.overflow = '';
+        document.body.classList.remove('modal-open');
         document.getElementById('shoppingForm').reset();
         this.editingItemId = null;
     }
@@ -3145,7 +3158,7 @@ function bindAuthEvents() {
         } else {
             // Open auth modal
             authModal.classList.add('active');
-            document.body.style.overflow = 'hidden';
+            document.body.classList.add('modal-open');
             document.getElementById('authEmail').focus();
         }
     });
@@ -3153,7 +3166,7 @@ function bindAuthEvents() {
     // Close auth modal
     closeAuthModal.addEventListener('click', () => {
         authModal.classList.remove('active');
-        document.body.style.overflow = '';
+        document.body.classList.remove('modal-open');
         authForm.reset();
         authError.style.display = 'none';
     });
@@ -3162,7 +3175,7 @@ function bindAuthEvents() {
     authModal.addEventListener('click', (e) => {
         if (e.target.id === 'authModal') {
             authModal.classList.remove('active');
-            document.body.style.overflow = '';
+            document.body.classList.remove('modal-open');
             authForm.reset();
             authError.style.display = 'none';
         }
@@ -3197,7 +3210,7 @@ function bindAuthEvents() {
         try {
             await window.authManager.signInWithGoogle();
             authModal.classList.remove('active');
-            document.body.style.overflow = '';
+            document.body.classList.remove('modal-open');
             authForm.reset();
         } catch (error) {
             authError.textContent = error;
@@ -3242,7 +3255,7 @@ function bindAuthEvents() {
             
             // Close modal on success
             authModal.classList.remove('active');
-            document.body.style.overflow = '';
+            document.body.classList.remove('modal-open');
             authForm.reset();
             
         } catch (error) {

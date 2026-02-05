@@ -72,10 +72,6 @@
 
         <!-- Quick Actions -->
         <div class="quick-actions">
-            <button class="quick-action-btn add-recipe-quick-btn" id="addRecipeQuickBtn">
-                <span class="quick-action-icon">🍳</span>
-                <span class="quick-action-text">Добавить рецепт</span>
-            </button>
             <button class="quick-action-btn planner-quick-btn" data-filter="planner">
                 <span class="quick-action-icon">📅</span>
                 <span class="quick-action-text">Меню</span>
@@ -121,10 +117,16 @@
                 <span class="tab-icon">🍰</span>
                 <span class="tab-text">Десерты</span>
             </button>
-            <div class="filter-divider"></div>
             <button class="tab-btn favorites-tab" data-filter="favorites">
                 <span class="tab-icon">❤️</span>
                 <span class="tab-text">Избранное</span>
+            </button>
+        </div>
+
+        <!-- Add Recipe Button (separate, centered below filters) -->
+        <div class="add-recipe-section">
+            <button class="tab-btn add-recipe-tab" id="addRecipeTabBtn">
+                <span class="tab-text">Добавить рецепт</span>
             </button>
         </div>
 
@@ -487,29 +489,16 @@
         </button>
         <button class="mobile-nav-item" data-filter="first">
             <span class="mobile-nav-icon">🍲</span>
-            <span class="mobile-nav-label">Первые блюда</span>
+            <span class="mobile-nav-label">Первые</span>
         </button>
         <button class="mobile-nav-item" data-filter="second">
             <span class="mobile-nav-icon">🍝</span>
-            <span class="mobile-nav-label">Вторые блюда</span>
+            <span class="mobile-nav-label">Вторые</span>
         </button>
         <button class="mobile-nav-item" data-filter="salads">
             <span class="mobile-nav-icon">🥗</span>
             <span class="mobile-nav-label">Салаты</span>
         </button>
-        <button class="mobile-nav-item" data-filter="snacks">
-            <span class="mobile-nav-icon">🍢</span>
-            <span class="mobile-nav-label">Закуски</span>
-        </button>
-        <button class="mobile-nav-item" data-filter="baking">
-            <span class="mobile-nav-icon">🥐</span>
-            <span class="mobile-nav-label">Выпечка</span>
-        </button>
-        <button class="mobile-nav-item" data-filter="dessert">
-            <span class="mobile-nav-icon">🍰</span>
-            <span class="mobile-nav-label">Десерты</span>
-        </button>
-        <div class="mobile-nav-divider"></div>
         <button class="mobile-nav-item favorites-nav-item" data-filter="favorites">
             <span class="mobile-nav-icon">❤️</span>
             <span class="mobile-nav-label">Избранное</span>
