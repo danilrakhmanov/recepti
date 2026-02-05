@@ -178,7 +178,7 @@ body::before {
         0 4px 15px rgba(255, 107, 157, 0.3),
         0 0 0 0 rgba(255, 107, 157, 0.4);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    animation: fadeInUp 0.8s ease-out 0.2s backwards, gradientShift 4s ease infinite;
+    animation: fadeInUp 0.8s ease-out 0.2s backwards, gradientShift 4s ease infinite, pulse 2s ease-in-out infinite;
     position: relative;
     overflow: hidden;
     min-width: 140px;
@@ -382,7 +382,7 @@ body::before {
 /* Search Container */
 .search-container {
     margin-bottom: 30px;
-    animation: fadeInUp 0.8s ease-out 0.3s backwards;
+    animation: fadeInUp 0.8s ease-out backwards;
     position: relative;
 }
 

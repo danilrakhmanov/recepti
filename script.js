@@ -252,6 +252,10 @@ n                }
 
         try {
             await auth.signOut();
+            
+            // Clear local data on sign out
+            this.clearLocalData();
+            
             if (window.recipeBook) {
                 window.recipeBook.showToast('Вы вышли из аккаунта 👋');
             }
@@ -259,6 +263,15 @@ n                }
             console.error('Sign out error:', error);
             throw error;
         }
+    }
+
+    clearLocalData() {
+        // Clear all app-related localStorage data
+        localStorage.removeItem('recipes');
+        localStorage.removeItem('shoppingList');
+        localStorage.removeItem('weeklyMenu');
+        localStorage.removeItem('lastSync');
+        console.log('Local data cleared on sign out');
     }
 
     getAuthError(error) {
@@ -1955,6 +1968,7 @@ class RecipeBook {
         const emptyState = document.getElementById('emptyState');
         const filterTabs = document.querySelector('.filter-tabs');
         const mobileNav = document.getElementById('mobileNav');
+        const searchContainer = document.querySelector('.search-container');
 
         // Check if we're switching between recipe filters or from/to planner/shopping
         const isRecipeFilter = ['all', 'first', 'second', 'salads', 'snacks', 'baking', 'dessert', 'favorites'].includes(filter);
@@ -1965,9 +1979,10 @@ class RecipeBook {
             emptyState.style.display = 'none';
             menuPlanner.style.display = 'block';
             shoppingList.style.display = 'none';
-            // Hide navigation
+            // Hide navigation and search
             filterTabs.classList.add('hidden');
             mobileNav.classList.add('hidden');
+            searchContainer.style.display = 'none';
             if (!this.menuPlanner) {
                 this.menuPlanner = new MenuPlanner(this);
             }
@@ -1976,9 +1991,10 @@ class RecipeBook {
             emptyState.style.display = 'none';
             menuPlanner.style.display = 'none';
             shoppingList.style.display = 'block';
-            // Hide navigation
+            // Hide navigation and search
             filterTabs.classList.add('hidden');
             mobileNav.classList.add('hidden');
+            searchContainer.style.display = 'none';
             if (!this.shoppingList) {
                 this.shoppingList = new ShoppingList(this);
             } else {
@@ -1988,10 +2004,11 @@ class RecipeBook {
             recipeGrid.style.display = 'grid';
             menuPlanner.style.display = 'none';
             shoppingList.style.display = 'none';
-            // Show navigation only if we were in planner or shopping
+            // Show navigation and search only if we were in planner or shopping
             if (!wasRecipeFilter) {
                 filterTabs.classList.remove('hidden');
                 mobileNav.classList.remove('hidden');
+                searchContainer.style.display = 'block';
             }
             this.renderRecipes();
         }
@@ -2893,7 +2910,7 @@ class ShoppingList {
         document.getElementById('shoppingSubmitText').textContent = 'Сохранить изменения';
         document.getElementById('shoppingItemName').value = item.name || '';
         document.getElementById('shoppingItemQuantity').value = item.quantity || '';
-        document.getElementById('shoppingItemCategory').value = item.category || 'other';
+        document.getElementById('shoppingItemCategory').value = item.category || '';
         document.getElementById('shoppingItemPriority').value = item.priority || 'normal';
         document.getElementById('shoppingModal').classList.add('active');
         document.body.style.overflow = 'hidden';
