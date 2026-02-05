@@ -146,7 +146,6 @@ body::before {
 
 /* iOS body fixes */
 html {
-    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
 }
 
@@ -155,7 +154,6 @@ body {
     overscroll-behavior-y: none;
     position: relative;
     min-height: 100vh;
-    overflow-x: hidden;
 }
 
 /* Prevent scroll on fixed elements */
@@ -168,13 +166,7 @@ body {
     backface-visibility: hidden;
 }
 
-/* Modal open state - prevents scroll on iOS */
-body.modal-open {
-    overflow: hidden !important;
-    position: fixed !important;
-    width: 100% !important;
-    height: 100% !important;
-}
+
 
 /* iOS Safari navigation fix */
 @supports (-webkit-touch-callout: none) {
@@ -1344,6 +1336,11 @@ button .ripple,
 .modal.active {
     display: flex;
     opacity: 1;
+}
+
+/* Prevent scroll when modal is open */
+body:has(.modal.active) {
+    overflow: hidden;
 }
 
 .modal-content {
