@@ -153,7 +153,9 @@ n                }
                 const data = shoppingDoc.data();
                 window.recipeBook.items = data.items || [];
                 window.recipeBook.saveToLocalStorage();
-                window.recipeBook.renderItems();
+                if (window.recipeBook.shoppingList) {
+                    window.recipeBook.shoppingList.renderItems();
+                }
                 console.log('Loaded shopping list from Firebase:', window.recipeBook.items.length);
             }
             
@@ -333,6 +335,7 @@ class RecipeParser {
             'gotovim.ru': this.parseGotovim.bind(this),
             'russianfood.com': this.parseRussianFood.bind(this),
             'allrecipes.ru': this.parseAllRecipes.bind(this),
+            'onetable.ru': this.parseOneTable.bind(this),
             'default': this.parseGeneric.bind(this)
         };
     }
@@ -400,6 +403,7 @@ class RecipeParser {
             if (hostname.includes('gotovim.ru')) return 'gotovim.ru';
             if (hostname.includes('russianfood.com')) return 'russianfood.com';
             if (hostname.includes('allrecipes.ru')) return 'allrecipes.ru';
+            if (hostname.includes('onetable.ru')) return 'onetable.ru';
             
             return 'default';
         } catch (error) {
@@ -886,6 +890,74 @@ class RecipeParser {
 
         // Steps
         const stepsList = doc.querySelectorAll('.steps li, .step-item');
+        stepsList.forEach((step, index) => {
+            const text = step.textContent.trim();
+            if (text) {
+                recipe.steps.push({
+                    text: text,
+                    image: ''
+                });
+            }
+        });
+
+        return recipe;
+    }
+
+    // Parse OneTable.ru
+    parseOneTable(doc, url) {
+        const recipe = {
+            name: '',
+            description: '',
+            cookingTime: '',
+            servings: '',
+            imageUrl: '',
+            ingredients: [],
+            steps: []
+        };
+
+        // Name - onetable.ru uses h1 with recipe-card__title
+        const nameEl = doc.querySelector('h1.recipe-card__title, h1');
+        recipe.name = nameEl ? nameEl.textContent.trim() : '';
+
+        // Description
+        const descEl = doc.querySelector('.recipe-card__description, .description');
+        recipe.description = descEl ? descEl.textContent.trim() : '';
+
+        // Cooking time
+        const timeEl = doc.querySelector('.recipe-card__time, .time, [itemprop="cookTime"]');
+        recipe.cookingTime = timeEl ? timeEl.textContent.trim() : '';
+
+        // Servings
+        const servingsEl = doc.querySelector('.recipe-card__portions, .portions, [itemprop="recipeYield"]');
+        recipe.servings = servingsEl ? servingsEl.textContent.trim() : '';
+
+        // Image
+        const imgEl = doc.querySelector('.recipe-card__image img, .recipe__image img, [itemprop="image"]');
+        recipe.imageUrl = imgEl ? imgEl.src : '';
+
+        // Ingredients
+        const ingredientsList = doc.querySelectorAll('.recipe-card__ingredients li, .ingredients li, .ingredient-list li, [itemprop="recipeIngredient"]');
+        ingredientsList.forEach(item => {
+            const text = item.textContent.trim();
+            if (text) {
+                // Try to split ingredient and quantity
+                const match = text.match(/^([^0-9]+)?\s*([0-9].*)$/);
+                if (match && match[1]) {
+                    recipe.ingredients.push({
+                        name: match[1].trim(),
+                        quantity: match[2] ? match[2].trim() : ''
+                    });
+                } else {
+                    recipe.ingredients.push({
+                        name: text,
+                        quantity: ''
+                    });
+                }
+            }
+        });
+
+        // Steps
+        const stepsList = doc.querySelectorAll('.recipe-card__steps li, .steps li, .instructions li, [itemprop="recipeInstructions"]');
         stepsList.forEach((step, index) => {
             const text = step.textContent.trim();
             if (text) {
