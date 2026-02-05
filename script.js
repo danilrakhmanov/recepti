@@ -56,8 +56,7 @@ class AuthManager {
                     }
                 } else {
                     console.log('User signed out');
-                    
-n                }
+                }
             });
         }
     }
