@@ -141,8 +141,12 @@ class AuthManager {
             if (recipesDoc.exists) {
                 const data = recipesDoc.data();
                 window.recipeBook.recipes = data.items || [];
-                window.recipeBook.saveToLocalStorage();
-                window.recipeBook.renderRecipes();
+                if (typeof window.recipeBook.saveToLocalStorage === 'function') {
+                    window.recipeBook.saveToLocalStorage();
+                }
+                if (typeof window.recipeBook.renderRecipes === 'function') {
+                    window.recipeBook.renderRecipes();
+                }
                 console.log('Loaded recipes from Firebase:', window.recipeBook.recipes.length);
             }
             
@@ -151,8 +155,10 @@ class AuthManager {
             if (shoppingDoc.exists) {
                 const data = shoppingDoc.data();
                 window.recipeBook.items = data.items || [];
-                window.recipeBook.saveToLocalStorage();
-                if (window.recipeBook.shoppingList) {
+                if (typeof window.recipeBook.saveToLocalStorage === 'function') {
+                    window.recipeBook.saveToLocalStorage();
+                }
+                if (window.recipeBook.shoppingList && typeof window.recipeBook.shoppingList.renderItems === 'function') {
                     window.recipeBook.shoppingList.renderItems();
                 }
                 console.log('Loaded shopping list from Firebase:', window.recipeBook.items.length);
@@ -163,8 +169,12 @@ class AuthManager {
             if (menuDoc.exists) {
                 const data = menuDoc.data();
                 window.recipeBook.menu = data.items || {};
-                window.recipeBook.saveToLocalStorage();
-                window.recipeBook.renderWeek();
+                if (typeof window.recipeBook.saveToLocalStorage === 'function') {
+                    window.recipeBook.saveToLocalStorage();
+                }
+                if (typeof window.recipeBook.renderWeek === 'function') {
+                    window.recipeBook.renderWeek();
+                }
                 console.log('Loaded weekly menu from Firebase:', Object.keys(window.recipeBook.menu).length);
             }
             
