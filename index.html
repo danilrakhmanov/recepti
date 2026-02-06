@@ -457,6 +457,10 @@
                             <span class="checkmark"></span>
                             Запомнить меня
                         </label>
+                        <button type="button" class="forgot-password-btn" id="forgotPasswordBtn">Забыли пароль?</button>
+                    </div>
+                    <div style="text-align: center; margin-top: 8px;">
+                        <button type="button" class="resend-verification-btn" id="resendVerificationBtn" style="display: none; background: none; border: none; color: var(--primary-color); font-family: 'Comfortaa', cursive; font-size: 13px; cursor: pointer; padding: 0;">Отправить письмо повторно 📧</button>
                     </div>
                 </form>
             </div>
@@ -481,27 +485,99 @@
         </div>
     </div>
 
+    <!-- My Account Modal -->
+    <div class="modal" id="accountModal">
+        <div class="modal-content account-modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">👤 Мой аккаунт</h2>
+                <button class="close-btn" id="closeAccountModal">&times;</button>
+            </div>
+            
+            <!-- User Info -->
+            <div class="account-user-info" id="accountUserInfo">
+                <div class="account-avatar" id="accountAvatar">👤</div>
+                <div class="account-details">
+                    <h3 class="account-name" id="accountName">Гость</h3>
+                    <p class="account-email" id="accountEmail">Войдите в аккаунт</p>
+                    <p class="account-status" id="accountStatus">Не авторизован</p>
+                </div>
+            </div>
+            
+            <!-- Account Stats -->
+            <div class="account-stats" id="accountStats">
+                <div class="stat-item">
+                    <span class="stat-icon">📖</span>
+                    <span class="stat-value" id="statRecipes">0</span>
+                    <span class="stat-label">Рецептов</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">🛒</span>
+                    <span class="stat-value" id="statShopping">0</span>
+                    <span class="stat-label">Покупок</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">📅</span>
+                    <span class="stat-value" id="statMenu">0</span>
+                    <span class="stat-label">В меню</span>
+                </div>
+            </div>
+            
+            <!-- Account Actions -->
+            <div class="account-actions">
+                <button class="account-btn" id="accountSyncBtn" style="display: none;">
+                    <span class="account-btn-icon">🔄</span>
+                    <span class="account-btn-text">Синхронизировать</span>
+                </button>
+                <button class="account-btn" id="accountPasswordBtn" style="display: none;">
+                    <span class="account-btn-icon">🔑</span>
+                    <span class="account-btn-text">Сменить пароль</span>
+                </button>
+                <button class="account-btn" id="accountDeleteDataBtn" style="display: none;">
+                    <span class="account-btn-icon">🗑️</span>
+                    <span class="account-btn-text">Удалить данные</span>
+                </button>
+                <button class="account-btn" id="accountVerifyEmailBtn" style="display: none;">
+                    <span class="account-btn-icon">📧</span>
+                    <span class="account-btn-text">Отправить письмо повторно</span>
+                </button>
+                <p class="account-verification-status" id="accountVerificationStatus" style="display: none; text-align: center; font-size: 0.85rem; color: #ef4444; margin: 8px 0;"></p>
+                <button class="account-btn danger" id="accountSignOutBtn">
+                    <span class="account-btn-icon">🚪</span>
+                    <span class="account-btn-text">Выйти</span>
+                </button>
+                <button class="account-btn" id="accountSignInBtn">
+                    <span class="account-btn-icon">🔐</span>
+                    <span class="account-btn-text">Войти / Зарегистрироваться</span>
+                </button>
+            </div>
+            
+            <!-- Account Info -->
+            <div class="account-info">
+                <p class="account-info-text">
+                    <span class="info-icon">💡</span>
+                    Ваши рецепты хранятся в облаке и синхронизируются между устройствами.
+                </p>
+            </div>
+        </div>
+    </div>
+
     <!-- Mobile Bottom Navigation -->
     <nav class="mobile-nav" id="mobileNav">
         <button class="mobile-nav-item" data-filter="all">
             <span class="mobile-nav-icon">📖</span>
             <span class="mobile-nav-label">Все</span>
         </button>
-        <button class="mobile-nav-item" data-filter="first">
-            <span class="mobile-nav-icon">🍲</span>
-            <span class="mobile-nav-label">Первые</span>
+        <button class="mobile-nav-item planner-nav-item" data-filter="planner">
+            <span class="mobile-nav-icon">📅</span>
+            <span class="mobile-nav-label">Меню</span>
         </button>
-        <button class="mobile-nav-item" data-filter="second">
-            <span class="mobile-nav-icon">🍝</span>
-            <span class="mobile-nav-label">Вторые</span>
-        </button>
-        <button class="mobile-nav-item" data-filter="salads">
-            <span class="mobile-nav-icon">🥗</span>
-            <span class="mobile-nav-label">Салаты</span>
+        <button class="mobile-nav-item shopping-nav-item" data-filter="shopping">
+            <span class="mobile-nav-icon">🛒</span>
+            <span class="mobile-nav-label">Покупки</span>
         </button>
         <button class="mobile-nav-item favorites-nav-item" data-filter="favorites">
             <span class="mobile-nav-icon">❤️</span>
-            <span class="mobile-nav-label">Избранное</span>
+            <span class="mobile-nav-label">Любимые</span>
         </button>
     </nav>
 

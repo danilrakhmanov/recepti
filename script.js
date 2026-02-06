@@ -186,9 +186,9 @@ class AuthManager {
         const authIcon = document.querySelector('.auth-icon');
 
         if (this.currentUser) {
-            authText.textContent = 'Выйти';
-            authIcon.textContent = '🚪';
-            authToggle.title = 'Выйти из аккаунта';
+            authText.textContent = 'Аккаунт';
+            authIcon.textContent = '👤';
+            authToggle.title = 'Мой аккаунт';
         } else {
             authText.textContent = 'Войти';
             authIcon.textContent = '👤';
@@ -263,6 +263,37 @@ class AuthManager {
         } catch (error) {
             console.error('Sign out error:', error);
             throw error;
+        }
+    }
+    
+    async sendPasswordResetEmail(email) {
+        if (!useFirebase || !auth) {
+            throw new Error('Firebase Auth не доступен');
+        }
+
+        try {
+            await auth.sendPasswordResetEmail(email);
+        } catch (error) {
+            console.error('Password reset error:', error);
+            throw this.getAuthError(error);
+        }
+    }
+    
+    async sendEmailVerification() {
+        if (!useFirebase || !auth || !this.currentUser) {
+            console.error('sendEmailVerification: Firebase not initialized or no current user');
+            throw new Error('Firebase Auth не доступен. Проверьте настройки Firebase Console.');
+        }
+
+        try {
+            console.log('Attempting to send verification email to:', this.currentUser.email);
+            await this.currentUser.sendEmailVerification();
+            console.log('Verification email sent successfully to:', this.currentUser.email);
+        } catch (error) {
+            console.error('Email verification error:', error);
+            console.error('Error code:', error.code);
+            console.error('Error message:', error.message);
+            throw this.getAuthError(error);
         }
     }
 
@@ -3203,6 +3234,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Bind auth events
     bindAuthEvents();
+    
+    // Bind account modal events
+    bindAccountEvents();
 });
 
 // Bind authentication events
@@ -3218,19 +3252,30 @@ function bindAuthEvents() {
     const nameGroup = document.getElementById('nameGroup');
     const authError = document.getElementById('authError');
     const googleAuthBtn = document.getElementById('googleAuthBtn');
+    const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+    const resendVerificationBtn = document.getElementById('resendVerificationBtn');
     
     let currentMode = 'login'; // 'login' or 'register'
+    let passwordResetMode = false; // Special mode for password reset
     
-    // Toggle auth modal
+    // Toggle auth modal - open account modal if logged in
     authToggle.addEventListener('click', () => {
         if (window.authManager.currentUser) {
-            // Sign out
-            window.authManager.signOut();
+            // Open account modal
+            openAccountModal();
         } else {
             // Open auth modal
             authModal.classList.add('active');
             document.body.classList.add('modal-open');
             document.getElementById('authEmail').focus();
+            
+            // Reset to login mode
+            currentMode = 'login';
+            authSubtabs.forEach(t => t.classList.remove('active'));
+            authSubtabs[0].classList.add('active');
+            authSubmitText.textContent = 'Войти';
+            nameGroup.style.display = 'none';
+            if (forgotPasswordBtn) forgotPasswordBtn.style.display = 'inline';
         }
     });
     
@@ -3263,9 +3308,12 @@ function bindAuthEvents() {
             if (currentMode === 'login') {
                 authSubmitText.textContent = 'Войти';
                 nameGroup.style.display = 'none';
+                if (forgotPasswordBtn) forgotPasswordBtn.style.display = 'inline';
             } else {
                 authSubmitText.textContent = 'Зарегистрироваться';
                 nameGroup.style.display = 'block';
+                if (forgotPasswordBtn) forgotPasswordBtn.style.display = 'none';
+                if (resendVerificationBtn) resendVerificationBtn.style.display = 'none';
             }
             
             authError.style.display = 'none';
@@ -3304,6 +3352,50 @@ function bindAuthEvents() {
         });
     }
     
+    // Forgot password button
+    if (forgotPasswordBtn) {
+        forgotPasswordBtn.addEventListener('click', async () => {
+            const email = document.getElementById('authEmail').value.trim();
+            
+            if (!email) {
+                authError.textContent = 'Введите ваш email для сброса пароля';
+                authError.style.display = 'block';
+                return;
+            }
+            
+            forgotPasswordBtn.disabled = true;
+            authSubmitBtn.disabled = true;
+            authSubmitText.textContent = 'Отправка...';
+            authError.style.display = 'none';
+            
+            try {
+                await window.authManager.sendPasswordResetEmail(email);
+                authError.textContent = 'Письмо для сброса пароля отправлено на ' + email;
+                authError.style.display = 'block';
+                authError.style.color = 'green';
+                
+                // Reset after 3 seconds
+                setTimeout(() => {
+                    passwordResetMode = false;
+                    forgotPasswordBtn.style.display = 'inline';
+                    authPassword.parentElement.parentElement.style.display = 'block';
+                    passwordToggle.style.display = 'block';
+                    authSubmitText.textContent = 'Войти';
+                    authSubmitBtn.disabled = false;
+                    forgotPasswordBtn.disabled = false;
+                    authError.style.color = '';
+                }, 3000);
+            } catch (error) {
+                authError.textContent = error;
+                authError.style.display = 'block';
+                authError.style.color = '';
+                forgotPasswordBtn.disabled = false;
+                authSubmitBtn.disabled = false;
+                authSubmitText.textContent = 'Войти';
+            }
+        });
+    }
+    
     // Email form submission
     authForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -3316,12 +3408,51 @@ function bindAuthEvents() {
         authSubmitBtn.disabled = true;
         authSubmitText.textContent = currentMode === 'login' ? 'Вход...' : 'Регистрация...';
         authError.style.display = 'none';
+        authError.style.color = '';
         
         try {
             if (currentMode === 'login') {
                 await window.authManager.signIn(email, password);
+                
+                // Check if email is verified (with timeout for Firebase to update)
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                if (!window.authManager.currentUser || !window.authManager.currentUser.emailVerified) {
+                    // Sign out and show message
+                    try {
+                        await window.authManager.signOut();
+                        window.authManager.currentUser = null;
+                    } catch (e) {}
+                    throw new Error('Пожалуйста, подтвердите ваш email перед входом. Проверьте почту и перейдите по ссылке в письме.');
+                }
             } else {
                 await window.authManager.signUp(email, password, name);
+                
+                // Send email verification with logging
+                try {
+                    await window.authManager.sendEmailVerification();
+                    console.log('Verification email sent successfully');
+                } catch (verifyError) {
+                    console.error('Failed to send verification email:', verifyError);
+                }
+                
+                // Sign out and show message
+                await window.authManager.signOut();
+                
+                // Force clear currentUser in authManager
+                window.authManager.currentUser = null;
+                
+                authError.textContent = 'Регистрация завершена! Пожалуйста, подтвердите ваш email. Проверьте почту и перейдите по ссылке в письме.';
+                authError.style.display = 'block';
+                authError.style.color = 'green';
+                authSubmitText.textContent = 'Готово';
+                
+                // Reset form after 5 seconds
+                setTimeout(() => {
+                    authSubmitText.textContent = 'Зарегистрироваться';
+                    authSubmitBtn.disabled = false;
+                }, 5000);
+                return;
             }
             
             // Close modal on success
@@ -3333,10 +3464,265 @@ function bindAuthEvents() {
             // Show error
             authError.textContent = error;
             authError.style.display = 'block';
+            
+            // Show resend verification button if email not verified
+            if (error.includes('подтвердите') && resendVerificationBtn) {
+                resendVerificationBtn.style.display = 'inline';
+            } else if (resendVerificationBtn) {
+                resendVerificationBtn.style.display = 'none';
+            }
         } finally {
-            // Re-enable submit button
-            authSubmitBtn.disabled = false;
-            authSubmitText.textContent = currentMode === 'login' ? 'Войти' : 'Зарегистрироваться';
+            // Re-enable submit button if not showing success message
+            if (!authError.style.color === 'green') {
+                authSubmitBtn.disabled = false;
+                authSubmitText.textContent = currentMode === 'login' ? 'Войти' : 'Зарегистрироваться';
+            }
         }
     });
+    
+    // Resend verification email button handler
+    if (resendVerificationBtn) {
+        resendVerificationBtn.addEventListener('click', async () => {
+            const email = document.getElementById('authEmail').value.trim();
+            const password = document.getElementById('authPassword').value;
+            if (!email || !password) {
+                window.recipeBook.showToast('Введите email и пароль');
+                return;
+            }
+            
+            resendVerificationBtn.disabled = true;
+            resendVerificationBtn.textContent = 'Отправка...';
+            
+            try {
+                // Sign in temporarily to send verification email
+                await window.authManager.signIn(email, password);
+                await window.authManager.sendEmailVerification();
+                await window.authManager.signOut();
+                
+                window.recipeBook.showToast('Письмо отправлено! 📧');
+                resendVerificationBtn.style.display = 'none';
+            } catch (error) {
+                window.recipeBook.showToast('Ошибка: ' + error);
+                resendVerificationBtn.disabled = false;
+                resendVerificationBtn.textContent = 'Отправить письмо повторно';
+            }
+        });
+    }
+}
+
+// Account Modal Functions
+function openAccountModal() {
+    const accountModal = document.getElementById('accountModal');
+    const accountName = document.getElementById('accountName');
+    const accountEmail = document.getElementById('accountEmail');
+    const accountStatus = document.getElementById('accountStatus');
+    const accountAvatar = document.getElementById('accountAvatar');
+    const accountSyncBtn = document.getElementById('accountSyncBtn');
+    const accountPasswordBtn = document.getElementById('accountPasswordBtn');
+    const accountDeleteDataBtn = document.getElementById('accountDeleteDataBtn');
+    const accountVerifyEmailBtn = document.getElementById('accountVerifyEmailBtn');
+    const accountVerificationStatus = document.getElementById('accountVerificationStatus');
+    const accountSignOutBtn = document.getElementById('accountSignOutBtn');
+    const accountSignInBtn = document.getElementById('accountSignInBtn');
+    
+    // Update user info
+    if (window.authManager.currentUser) {
+        const user = window.authManager.currentUser;
+        accountName.textContent = user.displayName || user.email.split('@')[0];
+        accountEmail.textContent = user.email;
+        
+        // Check if Google sign-in (password change not available)
+        const providerData = user.providerData || [];
+        const isGoogleUser = providerData.some(p => p.providerId === 'google.com');
+        
+        if (isGoogleUser) {
+            accountStatus.textContent = 'Google аккаунт';
+            accountPasswordBtn.style.display = 'none';
+        } else {
+            accountStatus.textContent = 'Email аккаунт';
+            accountPasswordBtn.style.display = 'flex';
+        }
+        
+        // Check email verification status
+        if (user.emailVerified) {
+            accountStatus.textContent += ' ✓';
+            accountVerifyEmailBtn.style.display = 'none';
+            accountVerificationStatus.style.display = 'none';
+        } else {
+            accountStatus.textContent += ' (не подтверждён)';
+            // Show resend button for non-Google users
+            if (!isGoogleUser) {
+                accountVerifyEmailBtn.style.display = 'flex';
+                accountVerificationStatus.style.display = 'block';
+                accountVerificationStatus.textContent = 'Подтвердите email для полного доступа';
+            } else {
+                accountVerifyEmailBtn.style.display = 'none';
+                accountVerificationStatus.style.display = 'none';
+            }
+        }
+        
+        accountAvatar.textContent = user.photoURL ? '🖼️' : '👤';
+        
+        // Show/hide buttons based on auth state
+        accountSyncBtn.style.display = 'flex';
+        accountDeleteDataBtn.style.display = 'flex';
+        accountSignOutBtn.style.display = 'flex';
+        accountSignInBtn.style.display = 'none';
+        
+        // Update stats
+        updateAccountStats();
+    } else {
+        accountName.textContent = 'Гость';
+        accountEmail.textContent = 'Войдите в аккаунт';
+        accountStatus.textContent = 'Не авторизован';
+        accountAvatar.textContent = '👤';
+        
+        accountSyncBtn.style.display = 'none';
+        accountPasswordBtn.style.display = 'none';
+        accountDeleteDataBtn.style.display = 'none';
+        accountVerifyEmailBtn.style.display = 'none';
+        accountVerificationStatus.style.display = 'none';
+        accountSignOutBtn.style.display = 'none';
+        accountSignInBtn.style.display = 'flex';
+        
+        // Reset stats
+        document.getElementById('statRecipes').textContent = '0';
+        document.getElementById('statShopping').textContent = '0';
+        document.getElementById('statMenu').textContent = '0';
+    }
+    
+    accountModal.classList.add('active');
+    document.body.classList.add('modal-open');
+}
+
+function closeAccountModal() {
+    const accountModal = document.getElementById('accountModal');
+    accountModal.classList.remove('active');
+    document.body.classList.remove('modal-open');
+}
+
+function updateAccountStats() {
+    if (!window.recipeBook) return;
+    
+    // Recipes count
+    const recipesCount = window.recipeBook.recipes ? window.recipeBook.recipes.length : 0;
+    document.getElementById('statRecipes').textContent = recipesCount;
+    
+    // Shopping list count
+    const shoppingCount = window.recipeBook.shoppingList && window.recipeBook.shoppingList.items 
+        ? window.recipeBook.shoppingList.items.length : 0;
+    document.getElementById('statShopping').textContent = shoppingCount;
+    
+    // Menu count
+    const menuCount = window.recipeBook.menu && Object.keys(window.recipeBook.menu).length > 0
+        ? Object.keys(window.recipeBook.menu).length : 0;
+    document.getElementById('statMenu').textContent = menuCount;
+}
+
+function bindAccountEvents() {
+    const accountModal = document.getElementById('accountModal');
+    const closeAccountModalBtn = document.getElementById('closeAccountModal');
+    const accountSignOutBtn = document.getElementById('accountSignOutBtn');
+    const accountSignInBtn = document.getElementById('accountSignInBtn');
+    const accountSyncBtn = document.getElementById('accountSyncBtn');
+    const accountPasswordBtn = document.getElementById('accountPasswordBtn');
+    const accountDeleteDataBtn = document.getElementById('accountDeleteDataBtn');
+    
+    // Close account modal
+    closeAccountModalBtn.addEventListener('click', closeAccountModal);
+    
+    // Close on backdrop click
+    accountModal.addEventListener('click', (e) => {
+        if (e.target.id === 'accountModal') {
+            closeAccountModal();
+        }
+    });
+    
+    // Sign out button
+    accountSignOutBtn.addEventListener('click', async () => {
+        try {
+            await window.authManager.signOut();
+            closeAccountModal();
+        } catch (error) {
+            window.recipeBook.showToast('Ошибка при выходе: ' + error);
+        }
+    });
+    
+    // Sign in button (opens auth modal)
+    accountSignInBtn.addEventListener('click', () => {
+        closeAccountModal();
+        document.getElementById('authModal').classList.add('active');
+        document.body.classList.add('modal-open');
+        document.getElementById('authEmail').focus();
+    });
+    
+    // Sync button
+    accountSyncBtn.addEventListener('click', async () => {
+        if (window.authManager.currentUser) {
+            accountSyncBtn.disabled = true;
+            accountSyncBtn.querySelector('.account-btn-text').textContent = 'Синхронизация...';
+            try {
+                await window.authManager.syncUserData();
+                updateAccountStats();
+                window.recipeBook.showToast('Данные синхронизированы! 🔄');
+            } catch (error) {
+                window.recipeBook.showToast('Ошибка синхронизации: ' + error);
+            } finally {
+                accountSyncBtn.disabled = false;
+                accountSyncBtn.querySelector('.account-btn-text').textContent = 'Синхронизировать';
+            }
+        }
+    });
+    
+    // Change password button
+    accountPasswordBtn.addEventListener('click', async () => {
+        if (!window.authManager.currentUser) return;
+        
+        const email = window.authManager.currentUser.email;
+        try {
+            await window.authManager.sendPasswordResetEmail(email);
+            window.recipeBook.showToast('Письмо для сброса пароля отправлено на ' + email);
+            closeAccountModal();
+        } catch (error) {
+            window.recipeBook.showToast('Ошибка: ' + window.authManager.getAuthError(error));
+        }
+    });
+    
+    // Delete data button
+    accountDeleteDataBtn.addEventListener('click', async () => {
+        if (!window.authManager.currentUser) return;
+        
+        const confirmDelete = confirm('Вы уверены, что хотите удалить все локальные данные?\n\nЭто действие нельзя отменить.');
+        if (!confirmDelete) return;
+        
+        // Clear local data
+        window.authManager.clearLocalData();
+        
+        // Reload page to refresh data
+        window.recipeBook.showToast('Локальные данные удалены 🗑️');
+        setTimeout(() => {
+            location.reload();
+        }, 1000);
+    });
+    
+    // Resend verification email button
+    const accountVerifyEmailBtn = document.getElementById('accountVerifyEmailBtn');
+    if (accountVerifyEmailBtn) {
+        accountVerifyEmailBtn.addEventListener('click', async () => {
+            if (!window.authManager.currentUser) return;
+            
+            accountVerifyEmailBtn.disabled = true;
+            accountVerifyEmailBtn.querySelector('.account-btn-text').textContent = 'Отправка...';
+            
+            try {
+                await window.authManager.sendEmailVerification();
+                window.recipeBook.showToast('Письмо для подтверждения отправлено! 📧');
+                closeAccountModal();
+            } catch (error) {
+                window.recipeBook.showToast('Ошибка: ' + error);
+                accountVerifyEmailBtn.disabled = false;
+                accountVerifyEmailBtn.querySelector('.account-btn-text').textContent = 'Отправить письмо повторно';
+            }
+        });
+    }
 }
