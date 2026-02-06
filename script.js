@@ -3423,18 +3423,6 @@ function bindAuthEvents() {
         try {
             if (currentMode === 'login') {
                 await window.authManager.signIn(email, password);
-                
-                // Check if email is verified (with timeout for Firebase to update)
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                if (!window.authManager.currentUser || !window.authManager.currentUser.emailVerified) {
-                    // Sign out and show message
-                    try {
-                        await window.authManager.signOut();
-                        window.authManager.currentUser = null;
-                    } catch (e) {}
-                    throw new Error('Пожалуйста, подтвердите ваш email перед входом. Проверьте почту и перейдите по ссылке в письме.');
-                }
             } else {
                 await window.authManager.signUp(email, password, name);
                 
