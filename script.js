@@ -26,6 +26,51 @@ try {
 }
 
 // Auth Manager Class
+// Helper function to clean data before saving to Firestore
+function cleanDataForFirestore(data) {
+    if (data === null || data === undefined) {
+        return null;
+    }
+    
+    if (typeof data !== 'object') {
+        return data;
+    }
+    
+    if (Array.isArray(data)) {
+        return data.map(item => cleanDataForFirestore(item))
+            .filter(item => item !== undefined);
+    }
+    
+    const cleaned = {};
+    for (const key in data) {
+        if (data.hasOwnProperty(key)) {
+            const value = data[key];
+            
+            // Skip functions, undefined, and symbols
+            if (typeof value === 'function' || value === undefined || typeof value === 'symbol') {
+                continue;
+            }
+            
+            // Skip DOM elements and other complex objects
+            if (value instanceof Node || value instanceof Window) {
+                continue;
+            }
+            
+            // Recursively clean nested objects
+            if (typeof value === 'object' && value !== null) {
+                const cleanedValue = cleanDataForFirestore(value);
+                if (cleanedValue !== null && Object.keys(cleanedValue).length > 0) {
+                    cleaned[key] = cleanedValue;
+                }
+            } else {
+                cleaned[key] = value;
+            }
+        }
+    }
+    
+    return cleaned;
+}
+
 class AuthManager {
     constructor() {
         this.currentUser = null;
@@ -120,7 +165,7 @@ class AuthManager {
                 const recipes = JSON.parse(recipesData);
                 if (recipes && recipes.length > 0) {
                     await db.collection('users').doc(userId).collection('data').doc('recipes').set({
-                        items: recipes,
+                        items: cleanDataForFirestore(recipes),
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                     console.log('Uploaded recipes to Firebase:', recipes.length);
@@ -133,7 +178,7 @@ class AuthManager {
                 const items = JSON.parse(shoppingData);
                 if (items && items.length > 0) {
                     await db.collection('users').doc(userId).collection('data').doc('shoppingList').set({
-                        items: items,
+                        items: cleanDataForFirestore(items),
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                     console.log('Uploaded shopping list to Firebase:', items.length);
@@ -146,7 +191,7 @@ class AuthManager {
                 const menu = JSON.parse(menuData);
                 if (menu && Object.keys(menu).length > 0) {
                     await db.collection('users').doc(userId).collection('data').doc('weeklyMenu').set({
-                        items: menu,
+                        items: cleanDataForFirestore(menu),
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                     console.log('Uploaded weekly menu to Firebase:', Object.keys(menu).length);
@@ -1399,7 +1444,7 @@ class RecipeBook {
                 
                 // Save all recipes as single document in user's data collection
                 await db.collection('users').doc(userId).collection('data').doc('recipes').set({
-                    items: this.recipes,
+                    items: cleanDataForFirestore(this.recipes),
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 console.log('Recipes saved to Firebase for user:', userId);
@@ -2129,7 +2174,7 @@ class RecipeBook {
             if (useFirebase && db) {
                 try {
                     const { id: recipeId, ...recipeData } = recipe;
-                    await db.collection('recipes').doc(id).set(recipeData);
+                    await db.collection('recipes').doc(id).set(cleanDataForFirestore(recipeData));
                 } catch (error) {
                     console.error('Error updating favorite in Firebase:', error);
                 }
@@ -2603,7 +2648,7 @@ class MenuPlanner {
             try {
                 const userId = window.authManager.currentUser.uid;
                 await db.collection('users').doc(userId).collection('data').doc('weeklyMenu').set({
-                    items: this.menu,
+                    items: cleanDataForFirestore(this.menu),
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 console.log('Menu saved to Firebase for user:', userId);
@@ -2914,7 +2959,7 @@ class ShoppingList {
             try {
                 const userId = window.authManager.currentUser.uid;
                 await db.collection('users').doc(userId).collection('data').doc('shoppingList').set({
-                    items: this.items,
+                    items: cleanDataForFirestore(this.items),
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 console.log('Shopping list saved to Firebase for user:', userId);

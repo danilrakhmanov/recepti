@@ -1939,6 +1939,17 @@ body:has(.modal.active) {
     }
 }
 
+/* Mobile Toast */
+@media (max-width: 768px) {
+    .toast {
+        bottom: max(90px, calc(80px + env(safe-area-inset-bottom) + 20px));
+        padding: 14px 24px;
+        font-size: 0.95rem;
+        width: 90%;
+        max-width: 360px;
+    }
+}
+
 /* Animations */
 @keyframes fadeIn {
     from {
@@ -2042,16 +2053,8 @@ body:has(.modal.active) {
     }
 
     .add-recipe-section {
-        margin-top: 20px;
-        margin-bottom: 30px;
-    }
-
-    .add-recipe-tab {
-        width: 100%;
-        max-width: 250px;
-        padding: 14px 28px;
-        font-size: 1rem;
-        min-width: unset;
+        margin-top: 15px;
+        margin-bottom: 20px;
     }
 
     .favorites-section {
@@ -2068,14 +2071,14 @@ body:has(.modal.active) {
     }
 
     .container {
-        padding-bottom: 90px;
+        padding-bottom: 80px;
     }
 }
 
 @media (max-width: 480px) {
     .container {
         padding: 15px;
-        padding-bottom: 85px;
+        padding-bottom: 80px;
     }
 
     .header {
@@ -2094,6 +2097,24 @@ body:has(.modal.active) {
 
     .tab-text {
         display: none;
+    }
+
+    /* Keep add-recipe-tab text visible */
+    .add-recipe-tab .tab-text {
+        display: inline !important;
+    }
+
+    .add-recipe-section {
+        margin-top: 15px;
+        margin-bottom: 20px;
+    }
+
+    .add-recipe-tab {
+        width: 100%;
+        max-width: 280px;
+        padding: 12px 20px;
+        font-size: 1rem;
+        min-width: unset;
     }
 
     .tab-btn .tab-icon {
@@ -2349,7 +2370,7 @@ body:has(.modal.active) {
     }
 
     .container {
-        padding-bottom: 100px;
+        padding-bottom: 80px;
         padding-left: 15px;
         padding-right: 15px;
     }
@@ -2370,6 +2391,23 @@ body:has(.modal.active) {
         margin: 0 auto 25px;
         position: relative;
         z-index: 2;
+    }
+
+    .add-recipe-section {
+        margin-top: 15px;
+        margin-bottom: 20px;
+    }
+
+    .add-recipe-tab {
+        width: 100%;
+        max-width: 280px;
+        padding: 12px 20px;
+        font-size: 1rem;
+        min-width: unset;
+    }
+
+    .add-recipe-tab .tab-text {
+        display: inline !important;
     }
 
     .search-input {
@@ -5107,8 +5145,24 @@ body:has(.modal.active) {
     
     .account-user-info {
         flex-direction: column;
+        align-items: center;
         text-align: center;
         padding: 16px;
+    }
+    
+    .account-details {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        width: 100%;
+    }
+    
+    .account-name-container,
+    .account-name-wrapper {
+        justify-content: center;
+        width: 100%;
+        padding-left: 20px;
     }
     
     .account-avatar {
@@ -5177,29 +5231,39 @@ body:has(.modal.active) {
         right: 0;
         background: var(--card-bg);
         box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
-        padding: 8px 4px 8px;
-        padding-bottom: max(8px, env(safe-area-inset-bottom));
+        padding: 6px 4px;
+        padding-bottom: max(6px, env(safe-area-inset-bottom));
         z-index: 10000;
-        justify-content: space-around;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
         -webkit-transform: translateZ(0);
         transform: translateZ(0);
+        gap: 2px;
+    }
+    
+    .mobile-nav::-webkit-scrollbar {
+        display: none;
     }
     
     .mobile-nav-item {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 4px;
-        padding: 8px 12px;
+        justify-content: center;
+        gap: 2px;
+        padding: 4px 8px;
         background: none;
         border: none;
         cursor: pointer;
         color: var(--text-secondary);
         font-family: 'Comfortaa', cursive;
-        font-size: 0.7rem;
-        border-radius: 12px;
+        font-size: 0.65rem;
+        border-radius: 10px;
         transition: all 0.2s ease;
-        min-width: 60px;
+        min-width: 50px;
+        flex-shrink: 0;
     }
     
     .mobile-nav-item.active {
@@ -5217,7 +5281,7 @@ body:has(.modal.active) {
     }
     
     .mobile-nav-icon {
-        font-size: 1.4rem;
+        font-size: 1.2rem;
         transition: transform 0.2s ease;
     }
     
@@ -5226,28 +5290,8 @@ body:has(.modal.active) {
     }
     
     .mobile-nav-label {
-        font-size: 0.65rem;
+        font-size: 0.55rem;
         font-weight: 500;
-    }
-    
-    .mobile-nav-item[data-filter="all"] {
-        order: 1;
-    }
-    
-    .mobile-nav-item[data-filter="planner"] {
-        order: 2;
-    }
-    
-    .mobile-nav-item[data-filter="shopping"] {
-        order: 3;
-    }
-    
-    .mobile-nav-item[data-filter="favorites"] {
-        order: 4;
-    }
-    
-    .mobile-nav-item.account-nav-item {
-        order: 5;
     }
     
     .mobile-nav-item.account-nav-item.active {
@@ -5270,16 +5314,16 @@ body:has(.modal.active) {
 
 @media (max-width: 380px) {
     .mobile-nav-item {
-        padding: 6px 8px;
-        min-width: 50px;
+        padding: 4px 6px;
+        min-width: 45px;
     }
     
     .mobile-nav-icon {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
     }
     
     .mobile-nav-label {
-        font-size: 0.6rem;
+        font-size: 0.5rem;
     }
     
     .account-modal-content {
