@@ -43,6 +43,9 @@ class AuthManager {
                 this.currentUser = user;
                 this.updateUI();
                 
+                // Update avatar on auth state change
+                updateAvatarOnAuthChange(user);
+                
                 if (user) {
                     // Check if email is verified
                     if (!user.emailVerified) {
@@ -169,9 +172,7 @@ class AuthManager {
                 if (typeof window.recipeBook.saveToLocalStorage === 'function') {
                     window.recipeBook.saveToLocalStorage();
                 }
-                if (typeof window.recipeBook.renderRecipes === 'function') {
-                    window.recipeBook.renderRecipes();
-                }
+                // Don't call renderRecipes here - RecipeBook.init() already handles it
                 console.log('Loaded recipes from Firebase:', window.recipeBook.recipes.length);
             }
             
@@ -1347,12 +1348,27 @@ class RecipeBook {
             const unsubscribe = db.collection('users').doc(userId).collection('data')
                 .doc('recipes')
                 .onSnapshot((snapshot) => {
+                    // Skip if this is the initial load (pending writes)
+                    // or if data hasn't actually changed
+                    if (snapshot.metadata.hasPendingWrites) {
+                        console.log('Real-time sync: skipping initial load');
+                        return;
+                    }
+                    
                     if (snapshot.exists) {
                         const data = snapshot.data();
-                        this.recipes = data.items || [];
-                        this.saveToLocalStorage();
-                        this.renderRecipes();
-                        console.log('Real-time sync: recipes updated from Firebase');
+                        const newRecipes = data.items || [];
+                        
+                        // Only update if data actually changed (compare JSON)
+                        const currentRecipesJson = JSON.stringify(this.recipes);
+                        const newRecipesJson = JSON.stringify(newRecipes);
+                        
+                        if (currentRecipesJson !== newRecipesJson) {
+                            this.recipes = newRecipes;
+                            this.saveToLocalStorage();
+                            this.renderRecipes();
+                            console.log('Real-time sync: recipes updated from Firebase');
+                        }
                     }
                 }, (error) => {
                     console.error('Error listening to recipe changes:', error);
@@ -1506,7 +1522,17 @@ class RecipeBook {
         // Mobile navigation
         document.querySelectorAll('.mobile-nav-item').forEach(item => {
             item.addEventListener('click', () => {
-                this.setFilter(item.dataset.filter);
+                // Check if this is a filter button (has data-filter attribute)
+                if (item.dataset.filter) {
+                    this.setFilter(item.dataset.filter);
+                } else if (item.id === 'mobileAccountBtn') {
+                    // Open account modal for mobile
+                    const accountModal = document.getElementById('accountModal');
+                    if (accountModal) {
+                        accountModal.style.display = 'flex';
+                        accountModal.classList.add('active');
+                    }
+                }
             });
         });
 
@@ -3615,7 +3641,7 @@ function openAccountModal() {
             }
         }
         
-        accountAvatar.textContent = user.photoURL ? '🖼️' : '👤';
+        // Avatar is now loaded automatically via updateAvatarOnAuthChange
         
         // Show/hide buttons based on auth state
         accountSyncBtn.style.display = 'flex';
@@ -3628,13 +3654,26 @@ function openAccountModal() {
             editNameBtn.style.display = 'block';
         }
         
+        // Hide avatar edit button initially
+        const avatarEditBtn = document.getElementById('avatarEditBtn');
+        if (avatarEditBtn) {
+            avatarEditBtn.style.display = 'none';
+        }
+        
         // Update stats
         updateAccountStats();
     } else {
         accountName.textContent = 'Гость';
         accountEmail.textContent = 'Войдите в аккаунт';
         accountStatus.textContent = 'Не авторизован';
-        accountAvatar.textContent = '👤';
+        
+        // Avatar reset is now handled by updateAvatarOnAuthChange
+        
+        // Hide avatar edit button for guests
+        const avatarEditBtn = document.getElementById('avatarEditBtn');
+        if (avatarEditBtn) {
+            avatarEditBtn.style.display = 'none';
+        }
         
         accountSyncBtn.style.display = 'none';
         accountPasswordBtn.style.display = 'none';
@@ -3708,12 +3747,19 @@ function bindAccountEvents() {
         editNameBtn.addEventListener('click', () => {
             const accountName = document.getElementById('accountName');
             const accountNameInputContainer = document.getElementById('accountNameInputContainer');
+            const avatarEditBtn = document.getElementById('avatarEditBtn');
             const currentName = window.authManager.currentUser?.displayName || '';
             
             // Hide name, show input
             accountName.style.display = 'none';
             editNameBtn.style.display = 'none';
             accountNameInputContainer.style.display = 'flex';
+            
+            // Show avatar edit button
+            if (avatarEditBtn) {
+                avatarEditBtn.style.display = 'flex';
+            }
+            
             document.getElementById('accountNameInput').value = currentName;
             document.getElementById('accountNameInput').focus();
             document.getElementById('accountNameInput').select();
@@ -3834,6 +3880,24 @@ function bindAccountEvents() {
             }
         });
     }
+    
+    // Avatar edit button
+    const avatarEditBtn = document.getElementById('avatarEditBtn');
+    const avatarInput = document.getElementById('avatarInput');
+    
+    if (avatarEditBtn && avatarInput) {
+        avatarEditBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            avatarInput.click();
+        });
+        
+        avatarInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                await uploadAvatar(file);
+            }
+        });
+    }
 }
 
 // Save account name
@@ -3868,8 +3932,157 @@ function cancelEditName() {
     const accountName = document.getElementById('accountName');
     const editNameBtn = document.getElementById('editNameBtn');
     const accountNameInputContainer = document.getElementById('accountNameInputContainer');
+    const avatarEditBtn = document.getElementById('avatarEditBtn');
     
     if (accountName) accountName.style.display = 'block';
     if (editNameBtn) editNameBtn.style.display = 'block';
     if (accountNameInputContainer) accountNameInputContainer.style.display = 'none';
+    
+    // Hide avatar edit button
+    if (avatarEditBtn) avatarEditBtn.style.display = 'none';
+}
+
+// Upload avatar
+async function uploadAvatar(file) {
+    if (!window.authManager.currentUser) {
+        window.recipeBook.showToast('Сначала войдите в аккаунт');
+        return;
+    }
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        window.recipeBook.showToast('Пожалуйста, выберите изображение');
+        return;
+    }
+    
+    // Validate file size (max 1MB for Firestore)
+    if (file.size > 1024 * 1024) {
+        window.recipeBook.showToast('Размер файла не должен превышать 1 МБ');
+        return;
+    }
+    
+    try {
+        // Read file as base64
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        
+        reader.onload = async () => {
+            const base64Data = reader.result;
+            const userId = window.authManager.currentUser.uid;
+            
+            try {
+                // Save avatar to Firestore
+                await db.collection('users').doc(userId).collection('data').doc('profile').set({
+                    avatar: base64Data,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+                
+                // Update user profile with a placeholder (Firestore doesn't support large photoURLs)
+                await window.authManager.currentUser.updateProfile({
+                    photoURL: 'avatar_updated'
+                });
+                
+                // Update avatar display
+                updateAvatarDisplay(base64Data);
+                
+                // Clear the file input
+                document.getElementById('avatarInput').value = '';
+                
+                window.recipeBook.showToast('Аватар обновлён! 📷');
+            } catch (error) {
+                console.error('Error saving avatar:', error);
+                window.recipeBook.showToast('Ошибка при сохранении аватара: ' + error.message);
+            }
+        };
+        
+        reader.onerror = (error) => {
+            console.error('Error reading file:', error);
+            window.recipeBook.showToast('Ошибка при чтении файла');
+        };
+    } catch (error) {
+        console.error('Error uploading avatar:', error);
+        window.recipeBook.showToast('Ошибка при загрузке аватара: ' + error.message);
+    }
+}
+
+// Load avatar from Firestore
+async function loadAvatar(userId) {
+    if (!db) return null;
+    
+    try {
+        const doc = await db.collection('users').doc(userId).collection('data').doc('profile').get();
+        if (doc.exists) {
+            const data = doc.data();
+            return data.avatar || null;
+        }
+    } catch (error) {
+        console.error('Error loading avatar:', error);
+    }
+    return null;
+}
+
+// Update avatar display
+function updateAvatarDisplay(photoURL) {
+    const accountAvatar = document.getElementById('accountAvatar');
+    
+    if (accountAvatar && photoURL) {
+        // Check if there's already an img element
+        let img = accountAvatar.querySelector('img');
+        if (!img) {
+            img = document.createElement('img');
+            img.alt = 'Аватар';
+            accountAvatar.textContent = '';
+            accountAvatar.appendChild(img);
+        }
+        img.src = photoURL;
+    }
+}
+
+// Update avatar on auth state change
+async function updateAvatarOnAuthChange(user) {
+    const accountAvatar = document.getElementById('accountAvatar');
+    const avatarEditBtn = document.getElementById('avatarEditBtn');
+    
+    if (user) {
+        // User is logged in - try to load avatar
+        let avatarData = null;
+        
+        if (db) {
+            avatarData = await loadAvatar(user.uid);
+        }
+        
+        if (avatarData) {
+            updateAvatarDisplay(avatarData);
+        } else if (user.photoURL && user.photoURL !== 'avatar_updated') {
+            updateAvatarDisplay(user.photoURL);
+        } else {
+            // Reset to default emoji
+            const img = accountAvatar?.querySelector('img');
+            if (img) {
+                img.remove();
+            }
+            if (accountAvatar) {
+                accountAvatar.textContent = '👤';
+            }
+        }
+        
+        // Show edit button
+        if (avatarEditBtn) {
+            avatarEditBtn.style.display = 'flex';
+        }
+    } else {
+        // User is logged out - reset avatar
+        const img = accountAvatar?.querySelector('img');
+        if (img) {
+            img.remove();
+        }
+        if (accountAvatar) {
+            accountAvatar.textContent = '👤';
+        }
+        
+        // Hide edit button
+        if (avatarEditBtn) {
+            avatarEditBtn.style.display = 'none';
+        }
+    }
 }

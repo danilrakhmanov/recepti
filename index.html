@@ -9,6 +9,7 @@
     <link rel="manifest" href="manifest.json">
     
     <!-- iOS Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Рецепты">
@@ -495,7 +496,13 @@
             
             <!-- User Info -->
             <div class="account-user-info" id="accountUserInfo">
-                <div class="account-avatar" id="accountAvatar">👤</div>
+                <div class="account-avatar-container">
+                    <div class="account-avatar" id="accountAvatar">👤</div>
+                    <button class="avatar-edit-btn" id="avatarEditBtn" title="Изменить аватар">
+                        <span>📷</span>
+                    </button>
+                    <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+                </div>
                 <div class="account-details">
                     <div class="account-name-container">
                         <div class="account-name-wrapper">
@@ -589,6 +596,10 @@
             <span class="mobile-nav-icon">❤️</span>
             <span class="mobile-nav-label">Любимые</span>
         </button>
+        <button class="mobile-nav-item account-nav-item" id="mobileAccountBtn">
+            <span class="mobile-nav-icon">👤</span>
+            <span class="mobile-nav-label">Аккаунт</span>
+        </button>
     </nav>
 
     <script src="script.js"></script>
@@ -601,24 +612,23 @@
                     .then((registration) => {
                         console.log('ServiceWorker registered: ', registration);
 
-                        // Check for updates
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // New version available
-                                    if (confirm('Доступна новая версия! Обновить страницу?')) {
-                                        newWorker.postMessage({ action: 'skipWaiting' });
-                                        window.location.reload();
-                                    }
-                                }
-                            });
-                        });
+                        // Check for updates - disabled for testing
+                        // registration.addEventListener('updatefound', () => {
+                        //     const newWorker = registration.installing;
+                        //     newWorker.addEventListener('statechange', () => {
+                        //         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        //             if (confirm('Доступна новая версия! Обновить страницу?')) {
+                        //                 newWorker.postMessage({ action: 'skipWaiting' });
+                        //                 window.location.reload();
+                        //             }
+                        //         }
+                        //     });
+                        // });
 
-                        // Listen for controlling changes
-                        navigator.serviceWorker.addEventListener('controllerchange', () => {
-                            window.location.reload();
-                        });
+                        // Listen for controlling changes - disabled for testing
+                        // navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        //     window.location.reload();
+                        // });
                     })
                     .catch((registrationError) => {
                         console.log('ServiceWorker registration failed: ', registrationError);

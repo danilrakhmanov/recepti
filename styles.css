@@ -4789,6 +4789,45 @@ body:has(.modal.active) {
     font-size: 2rem;
     color: white;
     box-shadow: 0 4px 12px rgba(255, 107, 157, 0.3);
+    overflow: hidden;
+}
+
+.account-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.account-avatar-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.avatar-edit-btn {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border: 2px solid var(--card-bg);
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+.avatar-edit-btn:hover {
+    transform: scale(1.1);
+}
+
+.avatar-edit-btn span {
+    pointer-events: none;
 }
 
 .account-details {
@@ -5062,6 +5101,8 @@ body:has(.modal.active) {
     .account-modal-content {
         padding: 16px;
         max-width: 100%;
+        max-height: 85vh;
+        overflow-y: auto;
     }
     
     .account-user-info {
@@ -5119,6 +5160,156 @@ body:has(.modal.active) {
     
     .account-info-text {
         font-size: 0.8rem;
+    }
+}
+
+/* Mobile Account Button in Bottom Nav */
+.mobile-nav {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--card-bg);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+        padding: 8px 4px 8px;
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+        z-index: 10000;
+        justify-content: space-around;
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+    }
+    
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 8px 12px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text-secondary);
+        font-family: 'Comfortaa', cursive;
+        font-size: 0.7rem;
+        border-radius: 12px;
+        transition: all 0.2s ease;
+        min-width: 60px;
+    }
+    
+    .mobile-nav-item.active {
+        color: var(--primary-color);
+        background: rgba(255, 107, 157, 0.1);
+    }
+    
+    .mobile-nav-item:hover {
+        color: var(--primary-color);
+        background: rgba(255, 107, 157, 0.05);
+    }
+    
+    .mobile-nav-item:active {
+        transform: scale(0.95);
+    }
+    
+    .mobile-nav-icon {
+        font-size: 1.4rem;
+        transition: transform 0.2s ease;
+    }
+    
+    .mobile-nav-item.active .mobile-nav-icon {
+        transform: scale(1.1);
+    }
+    
+    .mobile-nav-label {
+        font-size: 0.65rem;
+        font-weight: 500;
+    }
+    
+    .mobile-nav-item[data-filter="all"] {
+        order: 1;
+    }
+    
+    .mobile-nav-item[data-filter="planner"] {
+        order: 2;
+    }
+    
+    .mobile-nav-item[data-filter="shopping"] {
+        order: 3;
+    }
+    
+    .mobile-nav-item[data-filter="favorites"] {
+        order: 4;
+    }
+    
+    .mobile-nav-item.account-nav-item {
+        order: 5;
+    }
+    
+    .mobile-nav-item.account-nav-item.active {
+        color: var(--secondary-color);
+        background: rgba(168, 85, 247, 0.1);
+    }
+    
+    /* Account modal fullscreen on mobile */
+    .account-modal-content {
+        max-height: 90vh;
+        height: auto;
+        border-radius: 20px 20px 0 0;
+        margin-top: auto;
+    }
+    
+    .account-modal-content .modal-header {
+        border-radius: 20px 20px 0 0;
+    }
+}
+
+@media (max-width: 380px) {
+    .mobile-nav-item {
+        padding: 6px 8px;
+        min-width: 50px;
+    }
+    
+    .mobile-nav-icon {
+        font-size: 1.2rem;
+    }
+    
+    .mobile-nav-label {
+        font-size: 0.6rem;
+    }
+    
+    .account-modal-content {
+        padding: 12px;
+    }
+    
+    .account-btn {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+    }
+    
+    .account-stats {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+    
+    .stat-item {
+        padding: 10px 6px;
+    }
+    
+    .stat-icon {
+        font-size: 1.1rem;
+    }
+    
+    .stat-value {
+        font-size: 1.1rem;
+    }
+    
+    .stat-label {
+        font-size: 0.65rem;
     }
 }
 
