@@ -1,4 +1,4 @@
-// Firebase Configuration
+  // Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyAkGM_gzf97M0MXz--KV8__wlIwVCiqMqY",
     authDomain: "recepti-93f83.firebaseapp.com",
