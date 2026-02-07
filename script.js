@@ -44,6 +44,31 @@ class AuthManager {
                 this.updateUI();
                 
                 if (user) {
+                    // Check if email is verified
+                    if (!user.emailVerified) {
+                        console.log('User signed in but email not verified:', user.email);
+                        
+                        // Sign out user with email not verified (without toast and without closing modal)
+                        await auth.signOut(false);
+                        
+                        // Show error in auth modal if it's open - don't close modal, don't show toast
+                        const authError = document.getElementById('authError');
+                        const authSubmitBtn = document.getElementById('authSubmitBtn');
+                        const authSubmitText = document.getElementById('authSubmitText');
+                        if (authError) {
+                            authError.textContent = '❌ Почта не подтверждена. Проверьте почту и перейдите по ссылке в письме.';
+                            authError.style.display = 'block';
+                            authError.style.color = '';
+                        }
+                        if (authSubmitBtn) {
+                            authSubmitBtn.disabled = false;
+                        }
+                        if (authSubmitText) {
+                            authSubmitText.textContent = 'Войти';
+                        }
+                        return;
+                    }
+                    
                     console.log('User signed in:', user.email);
                     
                     // Sync data after sign in
@@ -256,7 +281,7 @@ class AuthManager {
         }
     }
 
-    async signOut() {
+    async signOut(showToast = true) {
         if (!useFirebase || !auth) {
             return;
         }
@@ -264,16 +289,38 @@ class AuthManager {
         try {
             await auth.signOut();
             
-            // Clear local data on sign out
+            // Clear local data and memory data on sign out
             this.clearLocalData();
+            this.clearMemoryData();
             
-            if (window.recipeBook) {
+            if (showToast && window.recipeBook) {
                 window.recipeBook.showToast('Вы вышли из аккаунта 👋');
             }
         } catch (error) {
             console.error('Sign out error:', error);
             throw error;
         }
+    }
+    
+    clearMemoryData() {
+        // Clear all app-related data in memory
+        if (window.recipeBook) {
+            window.recipeBook.recipes = [];
+            window.recipeBook.items = [];
+            window.recipeBook.menu = {};
+            
+            // Re-render all views
+            if (typeof window.recipeBook.renderRecipes === 'function') {
+                window.recipeBook.renderRecipes();
+            }
+            if (window.recipeBook.shoppingList && typeof window.recipeBook.shoppingList.renderItems === 'function') {
+                window.recipeBook.shoppingList.renderItems();
+            }
+            if (typeof window.recipeBook.renderWeek === 'function') {
+                window.recipeBook.renderWeek();
+            }
+        }
+        console.log('Memory data cleared on sign out');
     }
     
     async sendPasswordResetEmail(email) {
@@ -3297,16 +3344,6 @@ function bindAuthEvents() {
         authError.style.display = 'none';
     });
     
-    // Close on backdrop click
-    authModal.addEventListener('click', (e) => {
-        if (e.target.id === 'authModal') {
-            authModal.classList.remove('active');
-            document.body.classList.remove('modal-open');
-            authForm.reset();
-            authError.style.display = 'none';
-        }
-    });
-    
     // Subtab switching (Login/Register)
     authSubtabs.forEach(subtab => {
         subtab.addEventListener('click', () => {
@@ -3423,10 +3460,23 @@ function bindAuthEvents() {
         try {
             if (currentMode === 'login') {
                 await window.authManager.signIn(email, password);
+                
+                // Check if email is verified before closing modal
+                if (window.authManager.currentUser && !window.authManager.currentUser.emailVerified) {
+                    // Don't close modal, user needs to verify email
+                    authSubmitBtn.disabled = false;
+                    authSubmitText.textContent = 'Войти';
+                    return;
+                }
+                
+                // Close modal on success
+                authModal.classList.remove('active');
+                document.body.classList.remove('modal-open');
+                authForm.reset();
             } else {
                 await window.authManager.signUp(email, password, name);
                 
-                // Send email verification with logging
+                // Send email verification
                 try {
                     await window.authManager.sendEmailVerification();
                     console.log('Verification email sent successfully');
@@ -3434,22 +3484,24 @@ function bindAuthEvents() {
                     console.error('Failed to send verification email:', verifyError);
                 }
                 
-                // Sign out and show message
-                await window.authManager.signOut();
+                // Sign out and show message (without toast during registration)
+                await window.authManager.signOut(false);
                 
                 // Force clear currentUser in authManager
                 window.authManager.currentUser = null;
                 
-                authError.textContent = 'Регистрация завершена! Пожалуйста, подтвердите ваш email. Проверьте почту и перейдите по ссылке в письме.';
+                // Show message that email verification is required
+                authError.textContent = '📧 Письмо для подтверждения отправлено на ' + email + '. Проверьте почту и подтвердите регистрацию.';
                 authError.style.display = 'block';
-                authError.style.color = 'green';
-                authSubmitText.textContent = 'Готово';
+                authError.style.color = '';
+                authSubmitText.textContent = 'Отправлено';
                 
                 // Reset form after 5 seconds
                 setTimeout(() => {
                     authSubmitText.textContent = 'Зарегистрироваться';
                     authSubmitBtn.disabled = false;
                 }, 5000);
+                
                 return;
             }
             
@@ -3495,7 +3547,7 @@ function bindAuthEvents() {
                 // Sign in temporarily to send verification email
                 await window.authManager.signIn(email, password);
                 await window.authManager.sendEmailVerification();
-                await window.authManager.signOut();
+                await window.authManager.signOut(false);
                 
                 window.recipeBook.showToast('Письмо отправлено! 📧');
                 resendVerificationBtn.style.display = 'none';
@@ -3522,6 +3574,10 @@ function openAccountModal() {
     const accountVerificationStatus = document.getElementById('accountVerificationStatus');
     const accountSignOutBtn = document.getElementById('accountSignOutBtn');
     const accountSignInBtn = document.getElementById('accountSignInBtn');
+    const editNameBtn = document.getElementById('editNameBtn');
+    
+    // Cancel any ongoing name edit
+    cancelEditName();
     
     // Update user info
     if (window.authManager.currentUser) {
@@ -3567,6 +3623,11 @@ function openAccountModal() {
         accountSignOutBtn.style.display = 'flex';
         accountSignInBtn.style.display = 'none';
         
+        // Show edit name button only for authorized users
+        if (editNameBtn) {
+            editNameBtn.style.display = 'block';
+        }
+        
         // Update stats
         updateAccountStats();
     } else {
@@ -3582,6 +3643,11 @@ function openAccountModal() {
         accountVerificationStatus.style.display = 'none';
         accountSignOutBtn.style.display = 'none';
         accountSignInBtn.style.display = 'flex';
+        
+        // Hide edit name button for guests
+        if (editNameBtn) {
+            editNameBtn.style.display = 'none';
+        }
         
         // Reset stats
         document.getElementById('statRecipes').textContent = '0';
@@ -3625,6 +3691,7 @@ function bindAccountEvents() {
     const accountSyncBtn = document.getElementById('accountSyncBtn');
     const accountPasswordBtn = document.getElementById('accountPasswordBtn');
     const accountDeleteDataBtn = document.getElementById('accountDeleteDataBtn');
+    const editNameBtn = document.getElementById('editNameBtn');
     
     // Close account modal
     closeAccountModalBtn.addEventListener('click', closeAccountModal);
@@ -3635,6 +3702,50 @@ function bindAccountEvents() {
             closeAccountModal();
         }
     });
+    
+    // Edit name button
+    if (editNameBtn) {
+        editNameBtn.addEventListener('click', () => {
+            const accountName = document.getElementById('accountName');
+            const accountNameInputContainer = document.getElementById('accountNameInputContainer');
+            const currentName = window.authManager.currentUser?.displayName || '';
+            
+            // Hide name, show input
+            accountName.style.display = 'none';
+            editNameBtn.style.display = 'none';
+            accountNameInputContainer.style.display = 'flex';
+            document.getElementById('accountNameInput').value = currentName;
+            document.getElementById('accountNameInput').focus();
+            document.getElementById('accountNameInput').select();
+        });
+    }
+    
+    // Save name button
+    const saveNameBtn = document.getElementById('saveNameBtn');
+    if (saveNameBtn) {
+        saveNameBtn.addEventListener('click', async () => {
+            await saveAccountName();
+        });
+    }
+    
+    // Cancel name button
+    const cancelNameBtn = document.getElementById('cancelNameBtn');
+    if (cancelNameBtn) {
+        cancelNameBtn.addEventListener('click', () => {
+            cancelEditName();
+        });
+    }
+    
+    // Save name on Enter key
+    if (accountNameInput) {
+        accountNameInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                await saveAccountName();
+            } else if (e.key === 'Escape') {
+                cancelEditName();
+            }
+        });
+    }
     
     // Sign out button
     accountSignOutBtn.addEventListener('click', async () => {
@@ -3723,4 +3834,42 @@ function bindAccountEvents() {
             }
         });
     }
+}
+
+// Save account name
+async function saveAccountName() {
+    const accountName = document.getElementById('accountName');
+    const editNameBtn = document.getElementById('editNameBtn');
+    const accountNameInput = document.getElementById('accountNameInput');
+    const newName = accountNameInput.value.trim();
+    
+    if (!newName || !window.authManager.currentUser) {
+        cancelEditName();
+        return;
+    }
+    
+    try {
+        await window.authManager.currentUser.updateProfile({
+            displayName: newName
+        });
+        
+        // Update display
+        accountName.textContent = newName;
+        window.recipeBook.showToast('Имя изменено! ✏️');
+    } catch (error) {
+        window.recipeBook.showToast('Ошибка при изменении имени: ' + error);
+    }
+    
+    cancelEditName();
+}
+
+// Cancel edit name
+function cancelEditName() {
+    const accountName = document.getElementById('accountName');
+    const editNameBtn = document.getElementById('editNameBtn');
+    const accountNameInputContainer = document.getElementById('accountNameInputContainer');
+    
+    if (accountName) accountName.style.display = 'block';
+    if (editNameBtn) editNameBtn.style.display = 'block';
+    if (accountNameInputContainer) accountNameInputContainer.style.display = 'none';
 }

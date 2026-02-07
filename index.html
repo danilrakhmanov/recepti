@@ -497,7 +497,17 @@
             <div class="account-user-info" id="accountUserInfo">
                 <div class="account-avatar" id="accountAvatar">👤</div>
                 <div class="account-details">
-                    <h3 class="account-name" id="accountName">Гость</h3>
+                    <div class="account-name-container">
+                        <div class="account-name-wrapper">
+                            <h3 class="account-name-display" id="accountName">Гость</h3>
+                            <div class="account-name-input-container" id="accountNameInputContainer">
+                                <input type="text" class="account-name-input" id="accountNameInput" placeholder="Ваше имя">
+                                <button class="save-name-btn" id="saveNameBtn" title="Сохранить">✓</button>
+                                <button class="cancel-name-btn" id="cancelNameBtn" title="Отмена">✕</button>
+                            </div>
+                        </div>
+                        <button class="edit-name-btn" id="editNameBtn" title="Редактировать имя">✏️</button>
+                    </div>
                     <p class="account-email" id="accountEmail">Войдите в аккаунт</p>
                     <p class="account-status" id="accountStatus">Не авторизован</p>
                 </div>
