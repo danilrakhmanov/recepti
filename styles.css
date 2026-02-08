@@ -5,6 +5,11 @@
     box-sizing: border-box;
 }
 
+html, body {
+    width: 100%;
+    overflow-x: hidden;
+}
+
 :root {
     --primary-color: #ff6b9d;
     --primary-light: #ff8fb3;
@@ -1040,8 +1045,10 @@ button .ripple,
     transition: all 0.3s ease;
     position: relative;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
+    box-orient: vertical;
+    line-clamp: 3;
+    -webkit-line-clamp: 3;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -1276,15 +1283,15 @@ button .ripple,
 .empty-icon {
     font-size: 5rem;
     margin-bottom: 20px;
-    animation: float 3s ease-in-out infinite, iconPulse 2s ease-in-out infinite;
+    animation: float 3s ease-in-out infinite;
 }
 
 @keyframes iconPulse {
     0%, 100% {
-        transform: scale(1) rotate(0deg);
+        transform: scale(1);
     }
     50% {
-        transform: scale(1.1) rotate(5deg);
+        transform: scale(1.05);
     }
 }
 
@@ -2137,14 +2144,10 @@ body:has(.modal.active) {
         0 -4px 20px rgba(0, 0, 0, 0.15),
         0 0 0 1px rgba(255, 107, 157, 0.1);
     z-index: 9999;
-    padding: 6px 8px;
-    justify-content: center;
-    padding-bottom: max(6px, env(safe-area-inset-bottom));
-    padding-top: max(6px, env(safe-area-inset-top));
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    padding: 4px 2px;
+    justify-content: space-around;
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
+    padding-top: max(4px, env(safe-area-inset-top));
     /* iOS fixes */
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
@@ -2166,15 +2169,16 @@ body:has(.modal.active) {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 2px;
-    padding: 6px 4px;
-    border-radius: 12px;
+    padding: 4px 2px;
+    border-radius: 8px;
     background: transparent;
     border: none;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    min-width: 55px;
-    flex-shrink: 0;
+    min-width: 40px;
+    flex-shrink: 1;
     position: relative;
     overflow: hidden;
 }
@@ -2219,20 +2223,20 @@ body:has(.modal.active) {
 }
 
 .mobile-nav-icon {
-    font-size: 1.1rem;
-    transition: transform 0.3s ease;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    font-size: 0.9rem;
+    transition: transform 0.2s ease;
 }
 
 .mobile-nav-item:hover .mobile-nav-icon {
-    transform: scale(1.1) translateY(-2px);
+    transform: scale(1.05);
 }
 
 .mobile-nav-label {
-    font-size: 0.55rem;
-    font-weight: 600;
-    transition: color 0.3s ease;
+    font-size: 0.5rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
     color: var(--text-primary);
+    line-height: 1.2;
 }
 
 .mobile-nav-item:hover .mobile-nav-label {
@@ -2362,7 +2366,8 @@ body:has(.modal.active) {
     .mobile-nav {
         display: flex;
         justify-content: space-around;
-        padding: 6px 8px;
+        padding: 4px 2px;
+        padding-bottom: max(4px, env(safe-area-inset-bottom));
     }
 
     .filter-tabs {
@@ -2370,7 +2375,7 @@ body:has(.modal.active) {
     }
 
     .container {
-        padding-bottom: 80px;
+        padding-bottom: 70px;
         padding-left: 15px;
         padding-right: 15px;
     }
@@ -2540,24 +2545,24 @@ body:has(.modal.active) {
 
 @media (max-width: 480px) {
     .mobile-nav {
-        padding: 4px 6px;
+        padding: 3px 1px;
         justify-content: space-around;
     }
 
     .mobile-nav-item {
         min-width: unset;
         flex: 1;
-        max-width: 70px;
-        padding: 5px 3px;
+        max-width: unset;
+        padding: 3px 2px;
         gap: 1px;
     }
 
     .mobile-nav-icon {
-        font-size: 1.2rem;
+        font-size: 1rem;
     }
 
     .mobile-nav-label {
-        font-size: 0.65rem;
+        font-size: 0.5rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -5312,48 +5317,33 @@ body:has(.modal.active) {
     }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 430px) {
     .mobile-nav-item {
-        padding: 4px 6px;
-        min-width: 45px;
+        padding: 3px 2px;
+        min-width: unset;
     }
     
     .mobile-nav-icon {
-        font-size: 1.1rem;
+        font-size: 0.9rem;
     }
     
     .mobile-nav-label {
-        font-size: 0.5rem;
+        font-size: 0.45rem;
+    }
+}
+
+@media (max-width: 400px) {
+    .mobile-nav-item {
+        padding: 2px 1px;
+        min-width: unset;
     }
     
-    .account-modal-content {
-        padding: 12px;
-    }
-    
-    .account-btn {
-        padding: 10px 12px;
+    .mobile-nav-icon {
         font-size: 0.85rem;
     }
     
-    .account-stats {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 6px;
-    }
-    
-    .stat-item {
-        padding: 10px 6px;
-    }
-    
-    .stat-icon {
-        font-size: 1.1rem;
-    }
-    
-    .stat-value {
-        font-size: 1.1rem;
-    }
-    
-    .stat-label {
-        font-size: 0.65rem;
+    .mobile-nav-label {
+        font-size: 0.4rem;
     }
 }
 
