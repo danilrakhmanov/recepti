@@ -71,10 +71,23 @@ function cleanDataForFirestore(data) {
     return cleaned;
 }
 
+// Helper function to toggle theme button visibility
+function toggleThemeButton(show) {
+    const themeToggle = document.getElementById('themeToggle');
+    const authToggle = document.getElementById('authToggle');
+    if (themeToggle) {
+        themeToggle.style.display = show ? 'flex' : 'none';
+    }
+    if (authToggle) {
+        authToggle.style.display = show ? 'flex' : 'none';
+    }
+}
+
 class AuthManager {
     constructor() {
         this.currentUser = null;
         this.googleProvider = null;
+        this.isProcessingAuth = false; // Flag to prevent duplicate auth handling
         this.init();
     }
 
@@ -119,16 +132,49 @@ class AuthManager {
                     
                     console.log('User signed in:', user.email);
                     
-                    // Sync data after sign in
+                    // Skip processing if already handled by form handler
+                    if (this.isProcessingAuth) {
+                        console.log('Skipping onAuthStateChanged - already processing auth');
+                        this.isProcessingAuth = false;
+                        return;
+                    }
+                    
+                    // Close auth modal if open
+                    const authModal = document.getElementById('authModal');
+                    if (authModal && authModal.classList.contains('active')) {
+                        authModal.classList.remove('active');
+                        document.body.classList.remove('modal-open');
+                    }
+                    
+                    // Show theme toggle button after successful login
+                    toggleThemeButton(true);
+                    
+                    // Sync data with server first, then show all recipes
                     if (window.recipeBook) {
                         const displayName = user.displayName || user.email;
                         window.recipeBook.showToast(`Добро пожаловать, ${displayName}! 👋`);
                         
-                        // Sync data with server
-                        await this.syncUserData();
+                        // Ensure mobile navigation is visible before syncing
+                        const mobileNav = document.getElementById('mobileNav');
+                        if (mobileNav) {
+                            mobileNav.classList.remove('hidden');
+                        }
+                        
+                        // Sync data with server, then activate 'all' filter
+                        this.syncUserDataAndActivateFilter();
                     }
                 } else {
                     console.log('User signed out');
+                    
+                    // Close account modal if open
+                    const accountModal = document.getElementById('accountModal');
+                    if (accountModal && accountModal.classList.contains('active')) {
+                        accountModal.classList.remove('active');
+                        document.body.classList.remove('modal-open');
+                    }
+                    
+                    // Show theme toggle button after logout
+                    toggleThemeButton(true);
                 }
             });
         }
@@ -151,6 +197,41 @@ class AuthManager {
             console.log('Data synced successfully');
         } catch (error) {
             console.error('Error syncing user data:', error);
+        }
+    }
+    
+    // Sync user data and then activate 'all' filter
+    async syncUserDataAndActivateFilter() {
+        if (!useFirebase || !db || !this.currentUser) {
+            // If Firebase not available, just activate filter
+            if (window.recipeBook && typeof window.recipeBook.setFilter === 'function') {
+                window.recipeBook.setFilter('all');
+            }
+            return;
+        }
+        
+        try {
+            const userId = this.currentUser.uid;
+            console.log('Syncing data for user:', userId);
+            
+            // Upload local data to Firebase
+            await this.uploadLocalDataToFirebase(userId);
+            
+            // Then load data from Firebase
+            await this.loadDataFromFirebase(userId);
+            
+            // After data is loaded, activate 'all' filter
+            if (window.recipeBook && typeof window.recipeBook.setFilter === 'function') {
+                window.recipeBook.setFilter('all');
+            }
+            
+            console.log('Data synced and filter activated successfully');
+        } catch (error) {
+            console.error('Error syncing user data:', error);
+            // Still try to activate filter even if sync failed
+            if (window.recipeBook && typeof window.recipeBook.setFilter === 'function') {
+                window.recipeBook.setFilter('all');
+            }
         }
     }
 
@@ -217,7 +298,10 @@ class AuthManager {
                 if (typeof window.recipeBook.saveToLocalStorage === 'function') {
                     window.recipeBook.saveToLocalStorage();
                 }
-                // Don't call renderRecipes here - RecipeBook.init() already handles it
+                // Render recipes after loading
+                if (typeof window.recipeBook.renderRecipes === 'function') {
+                    window.recipeBook.renderRecipes();
+                }
                 console.log('Loaded recipes from Firebase:', window.recipeBook.recipes.length);
             }
             
@@ -250,6 +334,11 @@ class AuthManager {
             }
             
             console.log('All data loaded from Firebase for user:', userId);
+            
+            // Render recipes after loading all data
+            if (typeof window.recipeBook.renderRecipes === 'function') {
+                window.recipeBook.renderRecipes();
+            }
         } catch (error) {
             console.error('Error loading data from Firebase:', error);
         }
@@ -334,6 +423,16 @@ class AuthManager {
 
         try {
             await auth.signOut();
+            
+            // Close account modal if open
+            const accountModal = document.getElementById('accountModal');
+            if (accountModal && accountModal.classList.contains('active')) {
+                accountModal.classList.remove('active');
+                document.body.classList.remove('modal-open');
+            }
+            
+            // Show theme toggle button after logout
+            toggleThemeButton(true);
             
             // Clear local data and memory data on sign out
             this.clearLocalData();
@@ -1576,6 +1675,9 @@ class RecipeBook {
                     if (accountModal) {
                         accountModal.style.display = 'flex';
                         accountModal.classList.add('active');
+                        
+                        // Hide theme toggle button when modal is open
+                        toggleThemeButton(false);
                     }
                 }
             });
@@ -1909,12 +2011,19 @@ class RecipeBook {
 
         document.getElementById('modal').classList.add('active');
         document.getElementById('recipeName').focus();
+        
+        // Hide theme toggle button when modal is open
+        toggleThemeButton(false);
     }
 
     // Close modal
     closeModal() {
         document.getElementById('modal').classList.remove('active');
         document.body.classList.remove('modal-open');
+        
+        // Show theme toggle button when modal is closed
+        toggleThemeButton(true);
+        
         document.getElementById('recipeForm').reset();
 
         // Reset ingredients
@@ -2018,6 +2127,9 @@ class RecipeBook {
         const deleteModal = document.getElementById('deleteModal');
         deleteModal.classList.add('active');
         document.body.classList.add('modal-open');
+        
+        // Hide theme toggle button when modal is open
+        toggleThemeButton(false);
     }
 
     // Confirm delete
@@ -2043,6 +2155,9 @@ class RecipeBook {
         deleteModal.classList.remove('active');
         document.body.classList.remove('modal-open');
         this.recipeToDelete = null;
+        
+        // Show theme toggle button when modal is closed
+        toggleThemeButton(true);
     }
 
     // Open recipe detail modal
@@ -2147,12 +2262,18 @@ class RecipeBook {
         // Show modal
         document.getElementById('recipeDetailModal').classList.add('active');
         document.body.classList.add('modal-open');
+        
+        // Hide theme toggle button when modal is open
+        toggleThemeButton(false);
     }
 
     // Close recipe detail modal
     closeDetailModal() {
         document.getElementById('recipeDetailModal').classList.remove('active');
         document.body.classList.remove('modal-open');
+        
+        // Show theme toggle button when modal is closed
+        toggleThemeButton(true);
     }
 
     // Toggle favorite
@@ -3142,6 +3263,9 @@ class ShoppingList {
         document.getElementById('shoppingModal').classList.add('active');
         document.body.classList.add('modal-open');
         document.getElementById('shoppingItemName').focus();
+        
+        // Hide theme toggle button when modal is open
+        toggleThemeButton(false);
     }
 
     openEditModal(itemId) {
@@ -3165,6 +3289,9 @@ class ShoppingList {
         document.body.classList.remove('modal-open');
         document.getElementById('shoppingForm').reset();
         this.editingItemId = null;
+        
+        // Show theme toggle button when modal is closed
+        toggleThemeButton(true);
     }
 
     addItem() {
@@ -3397,6 +3524,9 @@ function bindAuthEvents() {
             document.body.classList.add('modal-open');
             document.getElementById('authEmail').focus();
             
+            // Hide theme toggle button when modal is open
+            toggleThemeButton(false);
+            
             // Reset to login mode
             currentMode = 'login';
             authSubtabs.forEach(t => t.classList.remove('active'));
@@ -3411,6 +3541,10 @@ function bindAuthEvents() {
     closeAuthModal.addEventListener('click', () => {
         authModal.classList.remove('active');
         document.body.classList.remove('modal-open');
+        
+        // Show theme toggle button when modal is closed
+        toggleThemeButton(true);
+        
         authForm.reset();
         authError.style.display = 'none';
     });
@@ -3445,11 +3579,12 @@ function bindAuthEvents() {
         googleAuthBtn.querySelector('.google-text').textContent = 'Вход...';
         
         try {
+            window.authManager.isProcessingAuth = true;
             await window.authManager.signInWithGoogle();
-            authModal.classList.remove('active');
-            document.body.classList.remove('modal-open');
-            authForm.reset();
+            // Note: syncUserDataAndActivateFilter() is called in onAuthStateChanged
+            // Modal will be closed and data synced automatically
         } catch (error) {
+            window.authManager.isProcessingAuth = false;
             authError.textContent = error;
             authError.style.display = 'block';
         } finally {
@@ -3530,6 +3665,7 @@ function bindAuthEvents() {
         
         try {
             if (currentMode === 'login') {
+                window.authManager.isProcessingAuth = true;
                 await window.authManager.signIn(email, password);
                 
                 // Check if email is verified before closing modal
@@ -3537,14 +3673,32 @@ function bindAuthEvents() {
                     // Don't close modal, user needs to verify email
                     authSubmitBtn.disabled = false;
                     authSubmitText.textContent = 'Войти';
+                    window.authManager.isProcessingAuth = false;
                     return;
                 }
                 
                 // Close modal on success
                 authModal.classList.remove('active');
                 document.body.classList.remove('modal-open');
+                
+                // Show theme toggle button after successful login
+                toggleThemeButton(true);
+                
+                // Sync data and show all recipes after login
+                if (window.recipeBook) {
+                    // Ensure mobile navigation is visible
+                    const mobileNav = document.getElementById('mobileNav');
+                    if (mobileNav) {
+                        mobileNav.classList.remove('hidden');
+                    }
+                    
+                    // Sync data with server and activate filter
+                    window.authManager.syncUserDataAndActivateFilter();
+                }
+                
                 authForm.reset();
             } else {
+                window.authManager.isProcessingAuth = true;
                 await window.authManager.signUp(email, password, name);
                 
                 // Send email verification
@@ -3557,6 +3711,7 @@ function bindAuthEvents() {
                 
                 // Sign out and show message (without toast during registration)
                 await window.authManager.signOut(false);
+                window.authManager.isProcessingAuth = false;
                 
                 // Force clear currentUser in authManager
                 window.authManager.currentUser = null;
@@ -3579,9 +3734,27 @@ function bindAuthEvents() {
             // Close modal on success
             authModal.classList.remove('active');
             document.body.classList.remove('modal-open');
+            
+            // Show theme toggle button after successful login
+            toggleThemeButton(true);
+            
+            // Show all recipes after login
+            if (window.recipeBook && typeof window.recipeBook.setFilter === 'function') {
+                window.recipeBook.setFilter('all');
+                
+                // Ensure mobile navigation is visible
+                const mobileNav = document.getElementById('mobileNav');
+                if (mobileNav) {
+                    mobileNav.classList.remove('hidden');
+                }
+            }
+            
             authForm.reset();
             
         } catch (error) {
+            // Reset processing flag
+            window.authManager.isProcessingAuth = false;
+            
             // Show error
             authError.textContent = error;
             authError.style.display = 'block';
@@ -3741,12 +3914,18 @@ function openAccountModal() {
     
     accountModal.classList.add('active');
     document.body.classList.add('modal-open');
+    
+    // Hide theme toggle button when modal is open
+    toggleThemeButton(false);
 }
 
 function closeAccountModal() {
     const accountModal = document.getElementById('accountModal');
     accountModal.classList.remove('active');
     document.body.classList.remove('modal-open');
+    
+    // Show theme toggle button when modal is closed
+    toggleThemeButton(true);
 }
 
 function updateAccountStats() {
@@ -3854,6 +4033,9 @@ function bindAccountEvents() {
         document.getElementById('authModal').classList.add('active');
         document.body.classList.add('modal-open');
         document.getElementById('authEmail').focus();
+        
+        // Hide theme toggle button when modal is open
+        toggleThemeButton(false);
     });
     
     // Sync button
