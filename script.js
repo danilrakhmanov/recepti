@@ -83,6 +83,22 @@ function toggleThemeButton(show) {
     }
 }
 
+// Helper function to hide mobile nav when modal opens
+function hideMobileNav() {
+    const mobileNav = document.getElementById('mobileNav');
+    if (mobileNav) {
+        mobileNav.classList.add('hidden');
+    }
+}
+
+// Helper function to show mobile nav when modal closes
+function showMobileNav() {
+    const mobileNav = document.getElementById('mobileNav');
+    if (mobileNav) {
+        mobileNav.classList.remove('hidden');
+    }
+}
+
 class AuthManager {
     constructor() {
         this.currentUser = null;
@@ -1675,6 +1691,7 @@ class RecipeBook {
                     if (accountModal) {
                         accountModal.style.display = 'flex';
                         accountModal.classList.add('active');
+                        hideMobileNav();
                         
                         // Hide theme toggle button when modal is open
                         toggleThemeButton(false);
@@ -1962,6 +1979,8 @@ class RecipeBook {
 
         document.getElementById('modal').classList.add('active');
         document.body.classList.add('modal-open');
+        hideMobileNav();
+        toggleThemeButton(false);
         document.getElementById('recipeName').focus();
     }
 
@@ -2127,6 +2146,7 @@ class RecipeBook {
         const deleteModal = document.getElementById('deleteModal');
         deleteModal.classList.add('active');
         document.body.classList.add('modal-open');
+        hideMobileNav();
         
         // Hide theme toggle button when modal is open
         toggleThemeButton(false);
@@ -2262,6 +2282,7 @@ class RecipeBook {
         // Show modal
         document.getElementById('recipeDetailModal').classList.add('active');
         document.body.classList.add('modal-open');
+        hideMobileNav();
         
         // Hide theme toggle button when modal is open
         toggleThemeButton(false);
@@ -3262,6 +3283,7 @@ class ShoppingList {
         document.getElementById('shoppingForm').reset();
         document.getElementById('shoppingModal').classList.add('active');
         document.body.classList.add('modal-open');
+        hideMobileNav();
         document.getElementById('shoppingItemName').focus();
         
         // Hide theme toggle button when modal is open
@@ -3281,12 +3303,14 @@ class ShoppingList {
         document.getElementById('shoppingItemPriority').value = item.priority || 'normal';
         document.getElementById('shoppingModal').classList.add('active');
         document.body.classList.add('modal-open');
+        hideMobileNav();
         document.getElementById('shoppingItemName').focus();
     }
 
     closeModal() {
         document.getElementById('shoppingModal').classList.remove('active');
         document.body.classList.remove('modal-open');
+        showMobileNav();
         document.getElementById('shoppingForm').reset();
         this.editingItemId = null;
         
@@ -3522,6 +3546,7 @@ function bindAuthEvents() {
             // Open auth modal
             authModal.classList.add('active');
             document.body.classList.add('modal-open');
+            hideMobileNav();
             document.getElementById('authEmail').focus();
             
             // Hide theme toggle button when modal is open
@@ -3541,6 +3566,7 @@ function bindAuthEvents() {
     closeAuthModal.addEventListener('click', () => {
         authModal.classList.remove('active');
         document.body.classList.remove('modal-open');
+        showMobileNav();
         
         // Show theme toggle button when modal is closed
         toggleThemeButton(true);
@@ -3680,6 +3706,7 @@ function bindAuthEvents() {
                 // Close modal on success
                 authModal.classList.remove('active');
                 document.body.classList.remove('modal-open');
+                showMobileNav();
                 
                 // Show theme toggle button after successful login
                 toggleThemeButton(true);
@@ -3734,6 +3761,7 @@ function bindAuthEvents() {
             // Close modal on success
             authModal.classList.remove('active');
             document.body.classList.remove('modal-open');
+            showMobileNav();
             
             // Show theme toggle button after successful login
             toggleThemeButton(true);
@@ -3914,6 +3942,7 @@ function openAccountModal() {
     
     accountModal.classList.add('active');
     document.body.classList.add('modal-open');
+    hideMobileNav();
     
     // Hide theme toggle button when modal is open
     toggleThemeButton(false);
@@ -3923,6 +3952,7 @@ function closeAccountModal() {
     const accountModal = document.getElementById('accountModal');
     accountModal.classList.remove('active');
     document.body.classList.remove('modal-open');
+    showMobileNav();
     
     // Show theme toggle button when modal is closed
     toggleThemeButton(true);
@@ -4032,6 +4062,7 @@ function bindAccountEvents() {
         closeAccountModal();
         document.getElementById('authModal').classList.add('active');
         document.body.classList.add('modal-open');
+        hideMobileNav();
         document.getElementById('authEmail').focus();
         
         // Hide theme toggle button when modal is open

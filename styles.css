@@ -147,6 +147,8 @@ body::before {
     padding-bottom: max(100px, calc(80px + env(safe-area-inset-bottom)));
     position: relative;
     z-index: 1;
+    overflow-y: visible;
+    overflow-x: hidden;
 }
 
 /* iOS body fixes */
@@ -156,9 +158,11 @@ html {
 
 body {
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: none;
+    overscroll-behavior-y: auto;
     position: relative;
     min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 /* Prevent scroll on fixed elements */
@@ -1346,7 +1350,37 @@ button .ripple,
 }
 
 /* Prevent scroll when modal is open */
+body.modal-open::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-gradient);
+    z-index: -1;
+}
+
+body.modal-open {
+    position: fixed !important;
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+body:has(.modal.active)::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-gradient);
+    z-index: -1;
+}
+
 body:has(.modal.active) {
+    position: fixed !important;
+    width: 100% !important;
     overflow: hidden;
 }
 
@@ -1358,17 +1392,37 @@ body:has(.modal.active) {
     border-radius: 20px;
     max-width: 520px;
     width: 100%;
-    max-height: 90vh;
+    max-height: 85vh;
     overflow-y: auto;
     box-shadow:
         0 25px 50px rgba(0, 0, 0, 0.3),
         0 0 0 1px rgba(255, 107, 157, 0.1);
-    transform: scale(0.9) translateY(-30px);
+    transform: scale(0.95);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .modal.active .modal-content {
-    transform: scale(1) translateY(0);
+    transform: scale(1);
+}
+
+/* Mobile Modal Adjustments */
+@media (max-width: 768px) {
+    .modal {
+        padding: 10px;
+        align-items: center;
+    }
+    
+    .modal-content {
+        max-height: 80vh;
+        border-radius: 20px;
+        margin-bottom: 0;
+    }
+    
+    .auth-modal-content,
+    .account-modal-content {
+        max-width: 100%;
+        padding: 16px;
+    }
 }
 
 .modal-header {
@@ -2154,7 +2208,7 @@ body:has(.modal.active) {
     -webkit-transform-style: preserve-3d;
     transform-style: preserve-3d;
     will-change: transform;
-    touch-action: manipulation;
+    touch-action: pan-x;
 }
 
 .mobile-nav.hidden {
@@ -2375,9 +2429,10 @@ body:has(.modal.active) {
     }
 
     .container {
-        padding-bottom: 70px;
+        padding-bottom: 85px;
         padding-left: 15px;
         padding-right: 15px;
+        min-height: calc(100vh - env(safe-area-inset-top));
     }
 
     .header {
